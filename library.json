@@ -13,8 +13,10 @@
     },
     "platforms": "espressif8266",
     "dependencies": [{
-        "name": "Crypto"
+        "name": "Crypto",
+        "author": "Rhys Weatherley"
     }, {
-        "name": "ArduinoJson"
+        "name": "ArduinoJson",
+        "author": "Benoit Blanchon"
     }]
 }
