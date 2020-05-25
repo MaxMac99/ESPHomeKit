@@ -3,7 +3,7 @@
 //
 
 #include "HomeKit.h"
-#include <srp.h>
+#include "crypto/srp.h"
 
 HomeKit::HomeKit(String password, String setupId, String name) : storage(new HKStorage()), server(new HKServer(this)), accessory(nullptr), password(std::move(password)), setupId(std::move(setupId)), name(std::move(name)), configNumber(1) {
 }
