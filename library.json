@@ -1,0 +1,20 @@
+{
+    "name": "HomeKit",
+    "version": "1.0.0",
+    "keywords": "apple, homekit",
+    "description": "HomeKit implementation for ESP8266",
+    "authors": {
+        "name": "Max Vissing",
+        "email": "max_vissing@yahoo.de"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://gitlab.com/maxmac99/esp-homekit.git"
+    },
+    "platforms": "espressif8266",
+    "dependencies": [{
+        "name": "Crypto"
+    }, {
+        "name": "ArduinoJson"
+    }]
+}
