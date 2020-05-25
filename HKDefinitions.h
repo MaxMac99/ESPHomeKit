@@ -39,7 +39,7 @@ enum HKAccessoryCategory {
     HKAccessoryFan                 = 3,
     HKAccessoryGarage              = 4,
     HKAccessoryLightbulb           = 5,
-    HKAccessoryDooLock             = 6,
+    HKAccessoryDoorLock             = 6,
     HKAccessoryOutlet              = 7,
     HKAccessorySwitch              = 8,
     HKAccessoryThermostat          = 9,
