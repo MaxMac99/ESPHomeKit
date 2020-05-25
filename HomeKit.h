@@ -1,6 +1,13 @@
-//
-// Created by Max Vissing on 2019-06-01.
-//
+/**
+ * @file HomeKit.h
+ * @author Max Vissing (max_vissing@yahoo.de)
+ * @brief root module for HomeKit
+ * @version 0.1
+ * @date 2020-05-25
+ * 
+ * @copyright Copyright (c) 2020
+ * 
+ */
 
 #ifndef HAP_SERVER_HOMEKIT_H
 #define HAP_SERVER_HOMEKIT_H

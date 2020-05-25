@@ -1,6 +1,13 @@
-//
-// Created by Max Vissing on 2019-04-26.
-//
+/**
+ * @file HKCharacteristic.h
+ * @author Max Vissing (max_vissing@yahoo.de)
+ * @brief 
+ * @version 0.1
+ * @date 2020-05-25
+ * 
+ * @copyright Copyright (c) 2020
+ * 
+ */
 
 #ifndef HAP_SERVER_HKCHARACTERISTIC_H
 #define HAP_SERVER_HKCHARACTERISTIC_H

@@ -1,6 +1,13 @@
-//
-// Created by Max Vissing on 2019-04-26.
-//
+/**
+ * @file HKAccessory.h
+ * @author Max Vissing (max_vissing@yahoo.de)
+ * @brief 
+ * @version 0.1
+ * @date 2020-05-25
+ * 
+ * @copyright Copyright (c) 2020
+ * 
+ */
 
 #ifndef HAP_SERVER_HKACCESSORY_H
 #define HAP_SERVER_HKACCESSORY_H
@@ -20,7 +27,10 @@ class HKClient;
 class HKServer;
 class HomeKit;
 
-
+/**
+ * @brief Override HKAccessory
+ * 
+ */
 class HKAccessory {
 public:
     explicit HKAccessory(HKAccessoryCategory category=HKAccessoryOther);

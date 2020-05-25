@@ -1,6 +1,13 @@
-//
-// Created by Max Vissing on 2019-04-26.
-//
+/**
+ * @file HKCharacteristic.cpp
+ * @author Max Vissing (max_vissing@yahoo.de)
+ * @brief 
+ * @version 0.1
+ * @date 2020-05-26
+ * 
+ * @copyright Copyright (c) 2020
+ * 
+ */
 
 #include "HKCharacteristic.h"
 

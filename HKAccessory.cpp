@@ -4,10 +4,23 @@
 
 #include "HKAccessory.h"
 
-
+/**
+ * @brief Construct a new HKAccessory::HKAccessory object
+ * 
+ * @param category Look up your Category in HKDefinitions.h or Apples HAP Documentation
+ */
 HKAccessory::HKAccessory(HKAccessoryCategory category) : id(1), category(category) {
 }
 
+/**
+ * @brief Add the Info Service to your accessory. For more information have a look at Apples HAP Documentation
+ * 
+ * @param accName Accessory name
+ * @param manufacturerName name of the manufacturer
+ * @param modelName Model name
+ * @param serialNumber Serial number
+ * @param firmwareRevision Firmware revision
+ */
 void HKAccessory::addInfoService(const String& accName, const String& manufacturerName, const String& modelName, const String& serialNumber, const String &firmwareRevision) {
     auto *infoService = new HKService(HKServiceType::HKServiceAccessoryInfo);
     addService(infoService);
@@ -34,11 +47,22 @@ void HKAccessory::addInfoService(const String& accName, const String& manufactur
     infoService->addCharacteristic(serialChar);
 }
 
+/**
+ * @brief Adds service to accessory
+ * 
+ * @param service 
+ */
 void HKAccessory::addService(HKService *service) {
     services.push_back(service);
     service->accessory = this;
 }
 
+/**
+ * @brief Find service with given type
+ * 
+ * @param serviceType service type to search for
+ * @return HKService* first service found or nullptr otherwise
+ */
 HKService *HKAccessory::getService(HKServiceType serviceType) {
     auto value = std::find_if(services.begin(), services.end(), [serviceType](HKService * const& obj){
         return obj->getServiceType() == serviceType;
@@ -49,14 +73,31 @@ HKService *HKAccessory::getService(HKServiceType serviceType) {
     return nullptr;
 }
 
+/**
+ * @brief Get the id
+ * 
+ * @return unsigned int id
+ */
 unsigned int HKAccessory::getId() const {
     return id;
 }
 
+/**
+ * @brief Get the category
+ * 
+ * @return HKAccessoryCategory 
+ */
 HKAccessoryCategory HKAccessory::getCategory() const {
     return category;
 }
 
+/**
+ * @brief Serialize the accessory and add it to json
+ * 
+ * @param json 
+ * @param value 
+ * @param client 
+ */
 void HKAccessory::serializeToJSON(JSON &json, HKValue *value, HKClient *client) {
     json.startObject();
 
@@ -77,6 +118,12 @@ void HKAccessory::serializeToJSON(JSON &json, HKValue *value, HKClient *client) 
     json.endObject();
 }
 
+/**
+ * @brief Find characteristic via id from all services
+ * 
+ * @param iid Characteristic ID to search for
+ * @return HKCharacteristic* characteristic or nullptr
+ */
 HKCharacteristic *HKAccessory::findCharacteristic(unsigned int iid) {
     for (auto service : services) {
         if (HKCharacteristic *result = service->findCharacteristic(iid)) {
@@ -86,6 +133,11 @@ HKCharacteristic *HKAccessory::findCharacteristic(unsigned int iid) {
     return nullptr;
 }
 
+/**
+ * @brief Clear all callback events
+ * 
+ * @param client 
+ */
 void HKAccessory::clearCallbackEvents(HKClient *client) {
     for (auto service : services) {
         for (auto characteristic : service->characteristics) {
@@ -94,6 +146,10 @@ void HKAccessory::clearCallbackEvents(HKClient *client) {
     }
 }
 
+/**
+ * @brief Initialize IDs during setup
+ * 
+ */
 void HKAccessory::prepareIDs() {
     setup();
 
