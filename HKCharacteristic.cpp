@@ -209,7 +209,7 @@ void HKCharacteristic::serializeToJSON(JSON &json, HKValue *jsonValue, unsigned 
             json.setString("value");
             json.setNull();
         } else if (v.format != format) {
-            HKLOGERROR("[HKCharacteristic::serializeToJSON] Value format is different from format (id=%d.%d: %d != %d)\r\n", service->getAccessory()->getId(), id, v.format, format);
+            HKLOGERROR("[HKCharacteristic::serializeToJSON] Value format is different from format (id=%d.%d: %d != %d, service=%s, type=%d)\r\n", service->getAccessory()->getId(), id, v.format, format, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
         } else {
             switch (v.format) {
                 case FormatBool:
@@ -245,7 +245,7 @@ void HKCharacteristic::serializeToJSON(JSON &json, HKValue *jsonValue, unsigned 
 
 HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
     if (!(permissions & PermissionPairedWrite)) {
-        HKLOGERROR("[HKCharacteristic::setValue] Failed to set characteristic value (id=%d.%d): no write permission\r\n", service->getAccessory()->getId(), id);
+        HKLOGERROR("[HKCharacteristic::setValue] Failed to set characteristic value (id=%d.%d, service=%s, type=%d): no write permission\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
         return HAPStatusReadOnly;
     }
 
@@ -260,11 +260,11 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
             } else if (compare == "true" || compare == "1") {
                 result = true;
             } else {
-                HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d): Json is not of type bool (%s)\r\n", service->getAccessory()->getId(), id, jsonValue.c_str());
+                HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d, service=%s, type=%d): Json is not of type bool (%s)\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type, jsonValue.c_str());
                 return HAPStatusInvalidValue;
             }
 
-            HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d) with bool: %d\r\n", service->getAccessory()->getId(), id, result);
+            HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d, service=%s, type=%d) with bool: %d\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type, result);
 
             if (setter) {
                 hkValue = HKValue(FormatBool, result);
@@ -322,7 +322,7 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
             }
 
             if (result < checkMinValue || result > checkMaxValue) {
-                HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d): int is not in range\r\n", service->getAccessory()->getId(), id);
+                HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d, service=%s, type=%d): int is not in range\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
                 return HAPStatusInvalidValue;
             }
 
@@ -336,7 +336,7 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
                 }
 
                 if (!matches) {
-                    HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d): int is not one of valid values\r\n", service->getAccessory()->getId(), id);
+                    HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d, service=%s, type=%d): int is not one of valid values\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
                     return HAPStatusInvalidValue;
                 }
             }
@@ -350,12 +350,12 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
                 }
 
                 if (!matches) {
-                    HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d): int is not one of valid values range\r\n", service->getAccessory()->getId(), id);
+                    HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d, service=%s, type=%d): int is not one of valid values range\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
                     return HAPStatusInvalidValue;
                 }
             }
 
-            HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d) with int: %d\r\n", service->getAccessory()->getId(), id, result);
+            HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d, service=%s, type=%d) with int: %d\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type, result);
 
             if (setter) {
                 hkValue = HKValue(format, result);
@@ -370,11 +370,11 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
             float result = jsonValue.toFloat();
 
             if ((minValue && result < *minValue) || (maxValue && result > *maxValue)) {
-                HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d): float is not in range\r\n", service->getAccessory()->getId(), id);
+                HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d, service=%s, type=%d): float is not in range\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
                 return HAPStatusInvalidValue;
             }
 
-            HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d) with float: %f\r\n", service->getAccessory()->getId(), id, result);
+            HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d, service=%s, type=%d) with float: %f\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type, result);
 
             if (setter) {
                 hkValue = HKValue(FormatFloat, result);
@@ -390,11 +390,11 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
 
             int checkMaxLen = maxLen ? *maxLen : 64;
             if (strlen(result) > checkMaxLen) {
-                HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d): String is too long\r\n", service->getAccessory()->getId(), id);
+                HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d, service=%s, type=%d): String is too long\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
                 return HAPStatusInvalidValue;
             }
 
-            HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d) with string: %s\r\n", service->getAccessory()->getId(), id, result);
+            HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d, service=%s, type=%d) with string: %s\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type, result);
 
             if (setter) {
                 hkValue = HKValue(FormatString, result);
@@ -406,11 +406,11 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
             break;
         }
         case FormatTLV: {
-            HKLOGERROR("[HKCharacteristic::setValue] (id=%d.%d) TLV not supported yet\r\n", service->getAccessory()->getId(), id);
+            HKLOGERROR("[HKCharacteristic::setValue] (id=%d.%d, service=%s, type=%d) TLV not supported yet\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
             break;
         }
         case FormatData: {
-            HKLOGERROR("[HKCharacteristic::setValue] (id=%d.%d) Data not supported yet\r\n", service->getAccessory()->getId(), id);
+            HKLOGERROR("[HKCharacteristic::setValue] (id=%d.%d, service=%s, type=%d) Data not supported yet\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
             break;
         }
     }
@@ -433,12 +433,12 @@ HAPStatus HKCharacteristic::setEvent(HKClient *client, const String& jsonValue) 
     } else if (compare == "true" || compare == "1") {
         events = true;
     } else {
-        HKLOGERROR("[HKCharacteristic::setEvent] Failed to update (id=%d.%d): Json is not of type bool (%s)\r\n", service->getAccessory()->getId(), id, jsonValue.c_str());
+        HKLOGERROR("[HKCharacteristic::setEvent] Failed to update (id=%d.%d, service=%s, type=%d): Json is not of type bool (%s)\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type, jsonValue.c_str());
         return HAPStatusInvalidValue;
     }
 
     if (!(permissions & PermissionNotify)) {
-        HKLOGERROR("[HKCharacteristic::setEvent] Failed to update (id=%d.%d): notifications are not supported\r\n", service->getAccessory()->getId(), id);
+        HKLOGERROR("[HKCharacteristic::setEvent] Failed to update (id=%d.%d, service=%s, type=%d): notifications are not supported\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
         return HAPStatusNotificationsUnsupported;
     }
 
