@@ -56,7 +56,7 @@ bool HKClient::received() {
     int addrStart = req.indexOf(' ');
     int addrEnd = req.indexOf(' ', addrStart + 1);
     if (addrStart == -1 || addrEnd == -1) {
-        HKLOGWARNING("[HKClient::received] (ip=%s) Could not parse address\r\n", remoteIP().toString().c_str());
+        HKLOGWARNING("[HKClient::received] (ip=%s) Could not parse address (request=%s)\r\n", remoteIP().toString().c_str(), req.c_str());
         free(data);
         return false;
     }
