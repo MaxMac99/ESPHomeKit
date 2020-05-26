@@ -993,28 +993,29 @@ void HKClient::onUpdateCharacteristics(const String &jsonBody) {
         if (begin == -1 || end == -1) {
             break;
         }
+        String item = jsonBody.substring(begin + 1, end);
 
-        HKLOGDEBUG("jsonBody item: %s\r\n", jsonBody.substring(begin, end).c_str());
-        int aidPos = jsonBody.indexOf("\"aid\"", cursor);
-        int iidPos = jsonBody.indexOf("\"iid\"", cursor);
-        int evPos = jsonBody.indexOf("\"ev\"", cursor);
-        int valuePos = jsonBody.indexOf("\"value\"", cursor);
+        HKLOGDEBUG("jsonBody item: %s\r\n", item.c_str());
+        int aidPos = item.indexOf("\"aid\"", cursor);
+        int iidPos = item.indexOf("\"iid\"", cursor);
+        int evPos = item.indexOf("\"ev\"", cursor);
+        int valuePos = item.indexOf("\"value\"", cursor);
         HKLOGDEBUG("jsonBody aidPos: %d iidPos: %d evPos: %d valuePos: %d\r\n", aidPos, iidPos, evPos, valuePos);
         if (aidPos == -1 || iidPos == -1 || (evPos == -1 && valuePos == -1)) {
             break;
         }
 
-        int aidBeginPos = jsonBody.indexOf(':', aidPos);
-        int aidEndPos = jsonBody.indexOf(',', aidPos);
-        int iidBeginPos = jsonBody.indexOf(':', iidPos);
-        int iidEndPos = jsonBody.indexOf(',', iidPos);
+        int aidBeginPos = item.indexOf(':', aidPos);
+        int aidEndPos = item.indexOf(',', aidPos);
+        int iidBeginPos = item.indexOf(':', iidPos);
+        int iidEndPos = item.indexOf(',', iidPos);
         HKLOGDEBUG("jsonBody aidBeginPos: %d aidEndPos: %d iidBeginPos: %d iidEndPos: %d\r\n", aidBeginPos, aidEndPos, iidBeginPos, iidEndPos);
         if (aidBeginPos == -1 || aidEndPos == -1 || iidBeginPos == -1 || iidEndPos == -1) {
             break;
         }
 
-        int aid = jsonBody.substring(aidBeginPos + 1, aidEndPos).toInt();
-        int iid = jsonBody.substring(iidBeginPos + 1, iidEndPos).toInt();
+        int aid = item.substring(aidBeginPos + 1, aidEndPos).toInt();
+        int iid = item.substring(iidBeginPos + 1, iidEndPos).toInt();
         HKLOGDEBUG("jsonBody aid: %d iid: %d\r\n", aid, iid);
         if (aid == 0 || iid == 0) {
             break;
@@ -1023,9 +1024,9 @@ void HKClient::onUpdateCharacteristics(const String &jsonBody) {
         String ev;
         String value;
         if (evPos != -1) {
-            int evBeginPos = jsonBody.indexOf(':', evPos);
-            int evEndPosSeparator = jsonBody.indexOf(',', evPos);
-            int evEndPosEnd = jsonBody.indexOf('}', evPos);
+            int evBeginPos = item.indexOf(':', evPos);
+            int evEndPosSeparator = item.indexOf(',', evPos);
+            int evEndPosEnd = item.indexOf('}', evPos);
             int evEndPos;
             if (evEndPosSeparator == -1 || evEndPosSeparator > evEndPosEnd) {
                 evEndPos = evEndPosEnd;
@@ -1033,14 +1034,14 @@ void HKClient::onUpdateCharacteristics(const String &jsonBody) {
                 evEndPos = evEndPosSeparator;
             }
             if (evBeginPos != -1 && evEndPos != -1) {
-                ev = jsonBody.substring(evBeginPos + 1, evEndPos);
+                ev = item.substring(evBeginPos + 1, evEndPos);
                 ev.trim();
             }
         }
         if (valuePos != -1) {
-            int valueBeginPos = jsonBody.indexOf(':', valuePos);
-            int valueEndPosSeparator = jsonBody.indexOf(',', valuePos);
-            int valueEndPosEnd = jsonBody.indexOf('}', valuePos);
+            int valueBeginPos = item.indexOf(':', valuePos);
+            int valueEndPosSeparator = item.indexOf(',', valuePos);
+            int valueEndPosEnd = item.indexOf('}', valuePos);
             int valueEndPos;
             if (valueEndPosSeparator == -1 || valueEndPosSeparator > valueEndPosEnd) {
                 valueEndPos = valueEndPosEnd;
@@ -1048,7 +1049,7 @@ void HKClient::onUpdateCharacteristics(const String &jsonBody) {
                 valueEndPos = valueEndPosSeparator;
             }
             if (valueBeginPos != -1 && valueEndPos != -1) {
-                value = jsonBody.substring(valueBeginPos + 1, valueEndPos);
+                value = item.substring(valueBeginPos + 1, valueEndPos);
                 value.trim();
             }
         }
