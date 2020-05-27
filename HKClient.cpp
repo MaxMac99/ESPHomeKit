@@ -1043,6 +1043,9 @@ void HKClient::onUpdateCharacteristics(const String &jsonBody) {
             int valueEndPosSeparator = item.indexOf(',', valuePos);
             int valueEndPosEnd = item.indexOf('}', valuePos);
             int valueEndPos;
+            if (valueEndPosEnd == -1) {
+                valueEndPosEnd = item.length();
+            }
             if (valueEndPosSeparator == -1 || valueEndPosSeparator > valueEndPosEnd) {
                 valueEndPos = valueEndPosEnd;
             } else {
