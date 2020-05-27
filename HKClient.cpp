@@ -996,10 +996,10 @@ void HKClient::onUpdateCharacteristics(const String &jsonBody) {
         String item = jsonBody.substring(begin + 1, end);
 
         HKLOGDEBUG("jsonBody item: %s\r\n", item.c_str());
-        int aidPos = item.indexOf("\"aid\"", cursor);
-        int iidPos = item.indexOf("\"iid\"", cursor);
-        int evPos = item.indexOf("\"ev\"", cursor);
-        int valuePos = item.indexOf("\"value\"", cursor);
+        int aidPos = item.indexOf("\"aid\"");
+        int iidPos = item.indexOf("\"iid\"");
+        int evPos = item.indexOf("\"ev\"");
+        int valuePos = item.indexOf("\"value\"");
         HKLOGDEBUG("jsonBody aidPos: %d iidPos: %d evPos: %d valuePos: %d\r\n", aidPos, iidPos, evPos, valuePos);
         if (aidPos == -1 || iidPos == -1 || (evPos == -1 && valuePos == -1)) {
             break;
