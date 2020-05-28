@@ -173,7 +173,6 @@ int HomeKit::getConfigNumber() {
  */
 void HomeKit::reset() {
     storage->reset();
-    ESP.reset();
 }
 
 /**
