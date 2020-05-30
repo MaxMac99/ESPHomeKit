@@ -183,7 +183,7 @@ bool HKClient::received() {
 
             String keyString = searchStr.substring(0, keyEndPos);
             String valueString;
-            if (keyEndPos < searchStr.length() && keyEndPos < nextPos) {
+            if ((unsigned int) keyEndPos < searchStr.length() && keyEndPos < nextPos) {
                 valueString = searchStr.substring(keyEndPos + 1, nextPos);
             }
             queries.insert(std::make_pair(keyString, valueString));
@@ -986,7 +986,7 @@ void HKClient::onUpdateCharacteristics(const String &jsonBody) {
         return;
     }
 
-    int cursor = 20;
+    unsigned int cursor = 20;
     while (jsonBody.length() > cursor) {
         int begin = jsonBody.indexOf('{', cursor);
         int end = jsonBody.indexOf('}', cursor);
@@ -1069,7 +1069,7 @@ void HKClient::onUpdateCharacteristics(const String &jsonBody) {
     send204Response();
 }
 
-HAPStatus HKClient::processUpdateCharacteristic(int aid, int iid, String ev, String value) {
+HAPStatus HKClient::processUpdateCharacteristic(unsigned int aid, unsigned int iid, String ev, String value) {
     HKAccessory *accessory = server->hk->getAccessory();
     if (accessory->getId() != aid) {
         HKLOGWARNING("[HKClient::processUpdateCharacteristic] Could not find accessory with id=%d\r\n", aid);

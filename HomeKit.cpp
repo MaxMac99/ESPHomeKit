@@ -19,7 +19,7 @@
  * @param setupId Used when generating a QR-Code; Has to be 4 characters long
  * @param name Name of HomeKit object; automatically generated when not specified
  */
-HomeKit::HomeKit(String password, String setupId, String name) : storage(new HKStorage()), server(new HKServer(this)), accessory(nullptr), password(std::move(password)), setupId(std::move(setupId)), name(std::move(name)), configNumber(1) {
+HomeKit::HomeKit(String password, String setupId, String name) : password(std::move(password)), storage(new HKStorage()), server(new HKServer(this)), accessory(nullptr), setupId(std::move(setupId)), name(std::move(name)), configNumber(1) {
 }
 
 /**
@@ -44,7 +44,7 @@ void HomeKit::setup() {
     }
 #endif
 
-    srp_init((uint8_t *) password.c_str());
+    srp_init(password.c_str());
 
     HKLOGINFO("[HomeKit::setup] Password: %s\r\n", (char *) srp_pinMessage() + 11);
 

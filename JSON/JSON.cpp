@@ -26,7 +26,7 @@ void JSON::write(const char *format, ...) {
     va_list arg_ptr;
 
     va_start(arg_ptr, format);
-    int len = vsnprintf((char *) buffer + pos, size - pos, format, arg_ptr);
+    size_t len = vsnprintf((char *) buffer + pos, size - pos, format, arg_ptr);
     va_end(arg_ptr);
 
     if (len + pos > size - 1) {

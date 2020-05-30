@@ -72,12 +72,12 @@ static inline int vn(const u8 *x,const u8 *y,int n)
   return memcmp(x,y,n);
 }
 
-int inline crypto_verify_16(const u8 *x,const u8 *y)
+static int inline crypto_verify_16(const u8 *x,const u8 *y)
 {
   return vn(x,y,16);
 }
 
-int inline crypto_verify_32(const u8 *x,const u8 *y)
+static int inline crypto_verify_32(const u8 *x,const u8 *y)
 {
   return vn(x,y,32);
 }
@@ -371,7 +371,7 @@ static void S(gf o, const gf a)
 
 static void M(gf o,const gf a,const gf b)
 {
-  unsigned i,j;
+  unsigned i;
   u16 as[16];
   u16 bs[16];
 
@@ -459,7 +459,7 @@ int crypto_scalarmult_curve25519(u8 *q,const u8 *n,const u8 *p)
 {
   u8 z[32],r;
   i64 x[80];
-  int i,j;
+  int i;
   gf a,b,c,d,e,f;
   FOR(i,31) z[i]=n[i];
   z[31]=(n[31]&127)|64;

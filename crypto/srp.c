@@ -54,7 +54,7 @@ static const uint8_t srp_N_hash_srp_G_hash[] =
 
 srp_keys_t srp;
 
-static uint8_t pinMessage[21] = "Pair-Setup:";
+static char pinMessage[21] = "Pair-Setup:";
 
 static void MPI_ERROR_CHECK(int CODE)
 {
@@ -67,11 +67,11 @@ static void MPI_ERROR_CHECK(int CODE)
     }
 }
 
-uint8_t *srp_pinMessage(void) {
+char *srp_pinMessage(void) {
     return pinMessage;
 }
 
-void srp_init(const uint8_t *pincode)
+void srp_init(const char *pincode)
 {
     int err_code;
     strcat(pinMessage, pincode);
@@ -94,7 +94,7 @@ void srp_init(const uint8_t *pincode)
     {
         uint8_t message[sizeof(srp.salt) + 64];
         memcpy(message, srp.salt, sizeof(srp.salt));
-        crypto_hash_sha512(message + sizeof(srp.salt), pinMessage, sizeof(pinMessage));
+        crypto_hash_sha512(message + sizeof(srp.salt), (uint8_t *) pinMessage, sizeof(pinMessage));
         crypto_hash_sha512(message, message, sizeof(message));
         err_code = mbedtls_mpi_read_binary(&x, message, 64);
         MPI_ERROR_CHECK(err_code);
@@ -255,7 +255,7 @@ uint8_t srp_setA(uint8_t* abuf, uint16_t length, moretime_t moretime)
     {
         uint8_t message[sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp.salt) + length + 384 + sizeof(srp.K)];
         memcpy(message, srp_N_hash_srp_G_hash, sizeof(srp_N_hash_srp_G_hash));
-        crypto_hash_sha512(message + sizeof(srp_N_hash_srp_G_hash), pinMessage, 10); // First 10 chars only - not the PIN part
+        crypto_hash_sha512(message + sizeof(srp_N_hash_srp_G_hash), (uint8_t *) pinMessage, 10); // First 10 chars only - not the PIN part
         memcpy(message + sizeof(srp_N_hash_srp_G_hash) + 64, srp.salt, sizeof(srp.salt));
         memcpy(message + sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp.salt), abuf, length);
         memcpy(message + sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp.salt) + length, srp.B, sizeof(srp.B));

@@ -355,7 +355,7 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
                 }
             }
 
-            HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d, service=%s, type=%d) with int: %d\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type, result);
+            HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d, service=%s, type=%d) with int: %" PRIu64 "\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type, result);
 
             if (setter) {
                 hkValue = HKValue(format, result);
@@ -388,7 +388,7 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
         case FormatString: {
             const char *result = jsonValue.c_str();
 
-            int checkMaxLen = maxLen ? *maxLen : 64;
+            unsigned int checkMaxLen = maxLen ? *maxLen : 64;
             if (strlen(result) > checkMaxLen) {
                 HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d, service=%s, type=%d): String is too long\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
                 return HAPStatusInvalidValue;
