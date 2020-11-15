@@ -1,7 +1,7 @@
 /**
- * @file HomeKit.h
+ * @file ESPHomeKit.h
  * @author Max Vissing (max_vissing@yahoo.de)
- * @brief root module for HomeKit
+ * @brief root module for ESPHomeKit
  * @version 0.1
  * @date 2020-05-25
  * 
@@ -14,6 +14,15 @@
 
 #include <Arduino.h>
 
+#ifndef HKPASSWORD
+#define HKPASSWORD "123-45-678"
+#pragma message ("WARNING: Using default Password 123-45-678")
+#endif
+
+#ifndef HKSETUPID
+#pragma message ("WARNING: No setup id given")
+#endif
+
 #include "HKDebug.h"
 #include "HKStorage.h"
 #include "HKAccessory.h"
@@ -22,10 +31,10 @@
 class HKAccessory;
 class HKServer;
 
-class HomeKit {
+class ESPHomeKit {
 public:
-    explicit HomeKit(String password, String setupId="", String name="");
-    ~HomeKit();
+    explicit ESPHomeKit();
+    ~ESPHomeKit();
     void setup();
     void update();
     void reset();
@@ -42,20 +51,14 @@ public:
     int getConfigNumber();
 
     HKStorage *getStorage();
-    String getPassword();
 
     friend class HKClient;
     friend class HKServer;
 private:
-    String generateCustomName();
-private:
-    String password;
     HKStorage *storage;
     HKServer *server;
     HKAccessory *accessory;
 
-    String setupId;
-    String name;
     int configNumber;
 };
 

@@ -11,7 +11,7 @@
 
 #define NOTIFICATION_UPDATE_FREQUENCY 1000
 
-HKServer::HKServer(HomeKit *hk) : WiFiServer(PORT), hk(hk), mdnsService() {
+HKServer::HKServer(ESPHomeKit *hk) : WiFiServer(PORT), hk(hk), mdnsService() {
 }
 
 void HKServer::setup() {
@@ -130,7 +130,7 @@ int HKServer::setupMDNS() {
         return false;
     }
     if (!MDNS.addServiceTxt(service, protocol, "ff", "0")) {  // feature flags
-        //   bit 0 - supports HAP pairing. required for all HomeKit accessories
+        //   bit 0 - supports HAP pairing. required for all ESPHomeKit accessories
         //   bits 1-7 - reserved
         HKLOGERROR("[HKServer::setupMDNS] Failed to add ff\r\n");
         return false;
@@ -148,16 +148,15 @@ int HKServer::setupMDNS() {
         return false;
     }
 
-    if (hk->setupId && hk->setupId.length() == 4) {
-        size_t dataSize = hk->setupId.length() + hk->getAccessoryId().length() + 1;
-        char *data = (char *) malloc(dataSize);
-        snprintf(data, dataSize, "%s%s", hk->setupId.c_str(), hk->getAccessoryId().c_str());
-        data[dataSize-1] = 0;
+#ifdef HKSETUPID
+        char *data = (char *) malloc(22);
+        snprintf(data, 22, "%s%s", HKSETUPID, hk->getAccessoryId().c_str());
+        data[21] = 0;
 
         unsigned char shaHash[64];
         SHA512 sha512 = SHA512();
         sha512.reset();
-        sha512.update(data, dataSize - 1);
+        sha512.update(data, 21);
         sha512.finalize(shaHash, 64);
 
         free(data);
@@ -168,7 +167,7 @@ int HKServer::setupMDNS() {
             HKLOGERROR("[HKServer::setupMDNS] Failed to add ci category\r\n");
             return false;
         }
-    }
+#endif
 
     return true;
 }

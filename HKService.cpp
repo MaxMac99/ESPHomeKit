@@ -17,9 +17,28 @@
  * @param type Service type (See Apples HAP Documentation)
  * @param hidden Is the service hidden
  * @param primary Is this the primary service
+ * @param name Set the optional characteristic
  */
-HKService::HKService(HKServiceType type, bool hidden, bool primary) : id(0), accessory(nullptr), serviceType(type), hidden(hidden), primary(primary) {
+HKService::HKService(HKServiceType type, bool hidden, bool primary, String name) : id(0), accessory(nullptr), serviceType(type), hidden(hidden), primary(primary) {
+    if (name != "") {
+        auto nameChar = new HKCharacteristic(HKCharacteristicName, HKValue(FormatString, name), PermissionPairedRead, "Name", FormatString);
+        addCharacteristic(nameChar);
+    }
+}
 
+/**
+ * @brief Add characteristic to service
+ * 
+ * @param name Add Name Characteristic or notify
+ */
+void HKService::setName(String name) {
+    HKCharacteristic *nameChar = getCharacteristic(HKCharacteristicName);
+    if (nameChar == nullptr) {
+        nameChar = new HKCharacteristic(HKCharacteristicName, HKValue(FormatString, name), PermissionPairedRead, "Name", FormatString);
+        addCharacteristic(nameChar);
+    } else {
+        nameChar->notify(HKValue(FormatString, name));
+    }
 }
 
 /**

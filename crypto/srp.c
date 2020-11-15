@@ -54,7 +54,7 @@ static const uint8_t srp_N_hash_srp_G_hash[] =
 
 srp_keys_t srp;
 
-static char pinMessage[21] = "Pair-Setup:";
+static char pinMessage[21] = "Pair-Setup:" HKPASSWORD;
 
 static void MPI_ERROR_CHECK(int CODE)
 {
@@ -67,14 +67,9 @@ static void MPI_ERROR_CHECK(int CODE)
     }
 }
 
-char *srp_pinMessage(void) {
-    return pinMessage;
-}
-
-void srp_init(const char *pincode)
+void srp_init(void)
 {
     int err_code;
-    strcat(pinMessage, pincode);
 
     // The MPI library uses a ridiculous amount of memory. We use the stack allocator
     // so we don't tie this memory up except when we absolutely need to.

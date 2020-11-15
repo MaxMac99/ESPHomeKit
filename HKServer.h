@@ -12,15 +12,15 @@
 #include <Arduino.h>
 #include <ESP8266mDNS.h>
 #include <WiFiServer.h>
-#include "HomeKit.h"
+#include "ESPHomeKit.h"
 #include "HKClient.h"
 
-class HomeKit;
+class ESPHomeKit;
 class HKClient;
 
 class HKServer : private WiFiServer {
 public:
-    explicit HKServer(HomeKit *hk);
+    explicit HKServer(ESPHomeKit *hk);
     void setup();
     void update();
     bool isPairing();
@@ -31,7 +31,7 @@ private:
     HKClient *availableHK(uint8_t* status = NULL);
     void processNotificationsFromClient(HKClient *client);
 private:
-    HomeKit *hk;
+    ESPHomeKit *hk;
 
     esp8266::MDNSImplementation::MDNSResponder::hMDNSService mdnsService;
 

@@ -24,6 +24,13 @@
 
 #define COMPARING String("MAX").c_str()
 
+#ifdef HKSETUPID
+#define STORAGE_CHECK HKSETUPID
+#else
+#define STORAGE_CHECK "MAXH"
+#endif
+#define STORAGE_CHECK_LEN 4
+
 struct Pairing {
     int id;
     char deviceId[36];
@@ -36,7 +43,8 @@ struct KeyPair {
     byte publicKey[32];
 };
 
-#define SSID_ADDR           STORAGE_BASE_ADDR
+#define STORAGE_CHECK_ADDR  STORAGE_BASE_ADDR
+#define SSID_ADDR           (STORAGE_CHECK_ADDR + STORAGE_CHECK_LEN)
 #define WIFI_PASSWORD_ADDR  (SSID_ADDR + 32)
 #define ACCESSORY_ID_ADDR   (WIFI_PASSWORD_ADDR + 64)
 #define ACCESSORY_KEY_ADDR  (ACCESSORY_ID_ADDR + 6)
@@ -45,6 +53,7 @@ struct KeyPair {
 class HKStorage {
 public:
     HKStorage();
+    void checkStorage();
     void reset();
     void resetPairings();
     void setSSID(const String &ssid);

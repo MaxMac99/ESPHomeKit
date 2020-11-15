@@ -25,9 +25,10 @@ class HKClient;
 
 class HKService {
 public:
-    explicit HKService(HKServiceType type, bool hidden=false, bool primary=false);
+    explicit HKService(HKServiceType type, bool hidden=false, bool primary=false, String name="");
     void addLinkedService(HKService *service);
     void addCharacteristic(HKCharacteristic *characteristic);
+    void setName(String name);
 
     HKServiceType getServiceType() const;
     HKAccessory *getAccessory();

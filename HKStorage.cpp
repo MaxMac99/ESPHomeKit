@@ -5,12 +5,21 @@
 #include "HKStorage.h"
 
 HKStorage::HKStorage() {
+    checkStorage();
+}
+
+void HKStorage::checkStorage() {
+    String comparing = readString(STORAGE_CHECK_ADDR, STORAGE_CHECK_LEN);
+    if (comparing != STORAGE_CHECK) {
+        reset();
+    }
 }
 
 void HKStorage::reset() {
     HKLOGINFO("[HKStorage::reset] Reset\r\n");
+    writeString(STORAGE_CHECK_ADDR, STORAGE_CHECK, STORAGE_CHECK_LEN);
     EEPROM.begin(4096);
-    for (unsigned int i = 0; i < 4096; i++) {
+    for (unsigned int i = STORAGE_CHECK_ADDR + STORAGE_CHECK_LEN; i < 4096; i++) {
         EEPROM.write(i, 0);
     }
     EEPROM.end();
@@ -35,11 +44,15 @@ String HKStorage::getAccessoryId() {
             generate = false;
         }
         if (number < 0x10) {
-            result += "0" + String(number, HEX) + ":";
+            result += "0" + String(number, HEX);
         } else {
-            result += String(number, HEX) + ":";
+            result += String(number, HEX);
+        }
+        if (i < 5) {
+            result += ":";
         }
     }
+    EEPROM.end();
     if (generate) {
         result = generateAccessoryId();
     }
@@ -52,12 +65,12 @@ KeyPair HKStorage::getAccessoryKey() {
     KeyPair result{};
     EEPROM.begin(4096);
     EEPROM.get(ACCESSORY_KEY_ADDR, result);
+    EEPROM.end();
 
     if (memcmp(result.privateKey, zero.privateKey, sizeof(result.privateKey)) == 0 || memcmp(result.publicKey, zero.publicKey, sizeof(result.publicKey)) == 0) {
         result = generateAccessoryKey();
     }
 
-    EEPROM.end();
     return result;
 }
 
@@ -80,18 +93,23 @@ String HKStorage::getPassword() {
 }
 
 String HKStorage::generateAccessoryId() {
+    EEPROM.begin(4096);
     String result = String();
     for (uint8_t i = 0; i < 6; i++) {
         uint8_t number = (uint8_t) random(0xFF);
         EEPROM.write(ACCESSORY_ID_ADDR + i, number);
         if (number < 0x10) {
-            result += "0" + String(number, HEX) + ":";
+            result += "0" + String(number, HEX);
         } else {
-            result += String(number, HEX) + ":";
+            result += String(number, HEX);
+        }
+        if (i < 5) {
+            result += ":";
         }
     }
     result.toUpperCase();
     EEPROM.commit();
+    EEPROM.end();
 
     HKLOGINFO("[HKStorage::generateAccessoryId] Accessory ID: %s\r\n", result.c_str());
 
@@ -99,6 +117,7 @@ String HKStorage::generateAccessoryId() {
 }
 
 KeyPair HKStorage::generateAccessoryKey() {
+    EEPROM.begin(4096);
     HKLOGINFO("[HKStorage::generateAccessoryKey] Generating Accessory Key\r\n");
     KeyPair result{};
     os_get_random(result.privateKey, sizeof(result.privateKey));
@@ -106,6 +125,7 @@ KeyPair HKStorage::generateAccessoryKey() {
     
     EEPROM.put(ACCESSORY_KEY_ADDR, result);
     EEPROM.commit();
+    EEPROM.end();
 
     return result;
 }
@@ -294,5 +314,6 @@ String HKStorage::readString(uint16_t address, uint16_t maxLength) {
         data += k;
         k = EEPROM.read(address + data.length());
     }
+    EEPROM.end();
     return data;
 }

@@ -19,13 +19,13 @@
 #include "HKService.h"
 #include "HKCharacteristic.h"
 #include "HKServer.h"
-#include "HomeKit.h"
+#include "ESPHomeKit.h"
 
 class HKService;
 class HKCharacteristic;
 class HKClient;
 class HKServer;
-class HomeKit;
+class ESPHomeKit;
 
 /**
  * @brief Override HKAccessory
@@ -33,13 +33,12 @@ class HomeKit;
  */
 class HKAccessory {
 public:
-    explicit HKAccessory(HKAccessoryCategory category=HKAccessoryOther);
+    explicit HKAccessory(const String &accessoryName, const String &modelName, const String &firmwareRevision, HKAccessoryCategory category=HKAccessoryOther);
 
     virtual void identify() {};
     virtual void run() = 0;
     virtual void setup() = 0;
 
-    void addInfoService(const String& accName, const String& manufacturerName, const String& modelName, const String& serialNumber, const String &firmwareRevision);
     void addService(HKService *service);
 
     HKService *getService(HKServiceType serviceType);
@@ -52,7 +51,7 @@ private:
     void serializeToJSON(JSON &json, HKValue *value, HKClient *client = nullptr);
     friend HKServer;
     friend HKClient;
-    friend HomeKit;
+    friend ESPHomeKit;
 private:
     unsigned int id;
     HKAccessoryCategory category;
