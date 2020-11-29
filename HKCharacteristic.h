@@ -48,7 +48,7 @@ public:
     HKCharacteristicType getType() const;
     const HKValue &getValue() const;
 
-    void setGetter(const std::function<HKValue()> &getter);
+    void setGetter(const std::function<const HKValue &()> &getter);
     void setSetter(const std::function<void(const HKValue)> &setter);
     void notify(const HKValue& newValue);
 private:
@@ -88,7 +88,7 @@ private:
     HKValidValues validValues;
     HKValidValuesRanges validValuesRanges;
 
-    std::function<HKValue()> getter;
+    std::function<const HKValue &()> getter;
     std::function<void(const HKValue)> setter;
 
     ChangeCallback *callback;

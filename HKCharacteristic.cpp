@@ -25,7 +25,7 @@ HKCharacteristic::~HKCharacteristic() {
     delete maxDataLen;
 }
 
-void HKCharacteristic::setGetter(const std::function<HKValue()> &getter) {
+void HKCharacteristic::setGetter(const std::function<const HKValue &()> &getter) {
     HKCharacteristic::getter = getter;
 }
 
