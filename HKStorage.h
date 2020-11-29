@@ -50,16 +50,15 @@ struct KeyPair {
 #define ACCESSORY_KEY_ADDR  (ACCESSORY_ID_ADDR + 6)
 #define PAIRINGS_ADDR       (ACCESSORY_KEY_ADDR + sizeof(KeyPair))
 
-class HKStorage {
-public:
-    HKStorage();
+namespace HKStorage {
     void checkStorage();
     void reset();
     void resetPairings();
-    void setSSID(const String &ssid);
+    void saveSSID(const String &ssid);
     String getSSID();
-    void setPassword(const String &password);
-    String getPassword();
+    void saveWiFiPassword(const String &password);
+    String getWiFiPassword();
+    
     String getAccessoryId();
     KeyPair getAccessoryKey();
 
@@ -70,13 +69,7 @@ public:
     Pairing *findPairing(const char *deviceId);
     int updatePairing(const String &deviceId, byte permission);
     int removePairing(const String &deviceId);
-private:
-    int findEmptyBlock();
-    String generateAccessoryId();
-    KeyPair generateAccessoryKey();
-    static void writeString(uint16_t address, String data, uint16_t maxLength=0);
-    static String readString(uint16_t address, uint16_t maxLength=0);
-private:
+    
     struct PairingData {
         char comparing[COMPARE_SIZE];
         unsigned char permissions;

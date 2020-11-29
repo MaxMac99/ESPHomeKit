@@ -51,12 +51,9 @@ public:
     String getAccessoryId();
     int getConfigNumber();
 
-    HKStorage *getStorage();
-
     friend class HKClient;
     friend class HKServer;
 private:
-    HKStorage *storage;
     HKServer *server;
     HKAccessory *accessory;
     Srp *srp;

@@ -16,7 +16,8 @@
  * @brief Construct a new ESPHomeKit::ESPHomeKit object
  * 
  */
-ESPHomeKit::ESPHomeKit() : storage(new HKStorage()), server(new HKServer(this)), accessory(nullptr), configNumber(1) {
+ESPHomeKit::ESPHomeKit() : server(new HKServer(this)), accessory(nullptr), configNumber(1) {
+    HKStorage::checkStorage();
 }
 
 /**
@@ -25,7 +26,6 @@ ESPHomeKit::ESPHomeKit() : storage(new HKStorage()), server(new HKServer(this)),
  */
 ESPHomeKit::~ESPHomeKit() {
     delete server;
-    delete storage;
 }
 
 /**
@@ -33,15 +33,15 @@ ESPHomeKit::~ESPHomeKit() {
  * 
  */
 void ESPHomeKit::setup() {
-    HKLOGINFO("[ESPHomeKit::setup] AccessoryID: %s\r\n", storage->getAccessoryId().c_str());
+    HKLOGINFO("[ESPHomeKit::setup] AccessoryID: %s\r\n", HKStorage::getAccessoryId().c_str());
 
 #if HKLOGLEVEL <= 1
-    for (auto pairing : storage->getPairings()) {
+    for (auto pairing : HKStorage::getPairings()) {
         HKLOGINFO("[HKStorage] Pairing id=%i deviceId=%36s permissions=%i\r\n", pairing->id, pairing->deviceId, pairing->permissions);
     }
 #endif
 
-    if (!storage->isPaired()) {
+    if (!HKStorage::isPaired()) {
         srp = new Srp(String(HKPASSWORD).c_str());
     }
 
@@ -59,35 +59,6 @@ void ESPHomeKit::setup() {
 void ESPHomeKit::update() {
     server->update();
     accessory->run();
-}
-
-/**
- * @brief Save the SSID in the EEPROM
- * 
- * @param ssid 
- * @param wiFiPassword 
- */
-void ESPHomeKit::saveSSID(const String& ssid, const String& wiFiPassword) {
-    storage->setSSID(ssid);
-    storage->setPassword(wiFiPassword);
-}
-
-/**
- * @brief Get saved SSID from EEPROM
- * 
- * @return String Saved SSID in EEPROM
- */
-String ESPHomeKit::getSSID() {
-    return storage->getSSID();
-}
-
-/**
- * @brief Get saved WiFi Password from EEPROM
- * 
- * @return String Saved WiFi Password in EEPROM
- */
-String ESPHomeKit::getWiFiPassword() {
-    return storage->getPassword();
 }
 
 /**
@@ -111,7 +82,7 @@ String ESPHomeKit::getName() {
     }
 
     String name = serviceName->getValue().stringValue;
-    String accessoryId = storage->getAccessoryId();
+    String accessoryId = HKStorage::getAccessoryId();
     name += "-" + accessoryId.substring(0, 2) + accessoryId.substring(3, 5);
     return name;
 }
@@ -133,7 +104,7 @@ void ESPHomeKit::setAccessory(HKAccessory *accessory) {
  * @return String accessory ID
  */
 String ESPHomeKit::getAccessoryId() {
-    return storage->getAccessoryId();
+    return HKStorage::getAccessoryId();
 }
 
 /**
@@ -155,26 +126,17 @@ int ESPHomeKit::getConfigNumber() {
 }
 
 /**
- * @brief Reset EEPROM and restart ESP
+ * @brief Reset EEPROM
  * 
  */
 void ESPHomeKit::reset() {
-    storage->reset();
+    HKStorage::reset();
 }
 
 /**
- * @brief Reset EEPROM and restart ESP
+ * @brief Reset all Pairings and keep WiFi
  * 
  */
 void ESPHomeKit::resetPairings() {
-    storage->resetPairings();
-}
-
-/**
- * @brief Get ESPHomeKit storage manager
- * 
- * @return HKStorage* storage manager
- */
-HKStorage *ESPHomeKit::getStorage() {
-    return storage;
+    HKStorage::resetPairings();
 }

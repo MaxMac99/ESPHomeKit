@@ -14,6 +14,7 @@
 #include <WiFiServer.h>
 #include "ESPHomeKit.h"
 #include "HKClient.h"
+#include "HKStorage.h"
 
 class ESPHomeKit;
 class HKClient;

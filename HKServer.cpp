@@ -135,7 +135,7 @@ int HKServer::setupMDNS() {
         HKLOGERROR("[HKServer::setupMDNS] Failed to add ff\r\n");
         return false;
     }
-    if (!MDNS.addServiceTxt(service, protocol, "sf", String(hk->getStorage()->isPaired() ? 0 : 1))) {  // status flags
+    if (!MDNS.addServiceTxt(service, protocol, "sf", String(HKStorage::isPaired() ? 0 : 1))) {  // status flags
         //   bit 0 - not paired
         //   bit 1 - not configured to join WiFi
         //   bit 2 - problem detected on accessory

@@ -4,8 +4,89 @@
 
 #include "HKStorage.h"
 
-HKStorage::HKStorage() {
-    checkStorage();
+// Helper Functions
+int findEmptyBlock() {
+    unsigned char pairingData[3];
+    EEPROM.begin(4096);
+    for (int i = 0; i < MAX_PAIRINGS; i++) {
+        EEPROM.get(PAIRINGS_ADDR + sizeof(HKStorage::PairingData)*i, pairingData);
+
+        bool empty = true;
+        for (unsigned char j : pairingData) {
+            if (j != 0x0) {
+                empty = false;
+                break;
+            }
+        }
+
+        if (empty) {
+            EEPROM.end();
+            return i;
+        }
+    }
+
+    EEPROM.end();
+    return -1;
+}
+
+String generateAccessoryId() {
+    EEPROM.begin(4096);
+    String result = String();
+    for (uint8_t i = 0; i < 6; i++) {
+        uint8_t number = (uint8_t) random(0xFF);
+        EEPROM.write(ACCESSORY_ID_ADDR + i, number);
+        if (number < 0x10) {
+            result += "0" + String(number, HEX) + ":";
+        } else {
+            result += String(number, HEX) + ":";
+        }
+    }
+    result.toUpperCase();
+    EEPROM.commit();
+    EEPROM.end();
+
+    HKLOGINFO("[HKStorage::generateAccessoryId] Accessory ID: %s\r\n", result.c_str());
+
+    return result;
+}
+
+KeyPair generateAccessoryKey() {
+    EEPROM.begin(4096);
+    HKLOGINFO("[HKStorage::generateAccessoryKey] Generating Accessory Key\r\n");
+    KeyPair result{};
+    os_get_random(result.privateKey, sizeof(result.privateKey));
+    Ed25519::derivePublicKey(result.publicKey, result.privateKey);
+    
+    EEPROM.put(ACCESSORY_KEY_ADDR, result);
+    EEPROM.commit();
+    EEPROM.end();
+
+    return result;
+}
+
+void writeString(uint16_t address, String data, uint16_t maxLength) {
+    EEPROM.begin(4096);
+    for (uint16_t i = 0; i < data.length() && (maxLength == 0 || i < maxLength); i++) {
+        EEPROM.write(address + i, data[i]);
+    }
+    if (maxLength == 0 || data.length() < maxLength) {
+        EEPROM.write(address + data.length(), '\0');
+    }
+    EEPROM.commit();
+    EEPROM.end();
+}
+
+String readString(uint16_t address, uint16_t maxLength) {
+    String data = String();
+    char k;
+    EEPROM.begin(4096);
+    k = EEPROM.read(address);
+    while (k != '\0' && (maxLength == 0 || data.length() < maxLength)) {
+        data += k;
+        k = EEPROM.read(address + data.length());
+    }
+    EEPROM.end();
+    return data;
 }
 
 void HKStorage::checkStorage() {
@@ -71,12 +152,12 @@ KeyPair HKStorage::getAccessoryKey() {
     return result;
 }
 
-void HKStorage::setSSID(const String &ssid) {
+void HKStorage::saveSSID(const String &ssid) {
     writeString(SSID_ADDR, ssid, 32);
     HKLOGINFO("[HKStorage::resetPairings] Set ssid %s\r\n", readString(SSID_ADDR, 32).c_str());
 }
 
-void HKStorage::setPassword(const String &password) {
+void HKStorage::saveWiFiPassword(const String &password) {
     writeString(WIFI_PASSWORD_ADDR, password, 64);
     HKLOGINFO("[HKStorage::resetPairings] Set password %s\r\n", readString(WIFI_PASSWORD_ADDR, 64).c_str());
 }
@@ -85,67 +166,8 @@ String HKStorage::getSSID() {
     return readString(SSID_ADDR, 32);
 }
 
-String HKStorage::getPassword() {
+String HKStorage::getWiFiPassword() {
     return readString(WIFI_PASSWORD_ADDR, 64);
-}
-
-String HKStorage::generateAccessoryId() {
-    EEPROM.begin(4096);
-    String result = String();
-    for (uint8_t i = 0; i < 6; i++) {
-        uint8_t number = (uint8_t) random(0xFF);
-        EEPROM.write(ACCESSORY_ID_ADDR + i, number);
-        if (number < 0x10) {
-            result += "0" + String(number, HEX) + ":";
-        } else {
-            result += String(number, HEX) + ":";
-        }
-    }
-    result.toUpperCase();
-    EEPROM.commit();
-    EEPROM.end();
-
-    HKLOGINFO("[HKStorage::generateAccessoryId] Accessory ID: %s\r\n", result.c_str());
-
-    return result;
-}
-
-KeyPair HKStorage::generateAccessoryKey() {
-    EEPROM.begin(4096);
-    HKLOGINFO("[HKStorage::generateAccessoryKey] Generating Accessory Key\r\n");
-    KeyPair result{};
-    os_get_random(result.privateKey, sizeof(result.privateKey));
-    Ed25519::derivePublicKey(result.publicKey, result.privateKey);
-    
-    EEPROM.put(ACCESSORY_KEY_ADDR, result);
-    EEPROM.commit();
-    EEPROM.end();
-
-    return result;
-}
-
-int HKStorage::findEmptyBlock() {
-    unsigned char pairingData[3];
-    EEPROM.begin(4096);
-    for (int i = 0; i < MAX_PAIRINGS; i++) {
-        EEPROM.get(PAIRINGS_ADDR + sizeof(PairingData)*i, pairingData);
-
-        bool empty = true;
-        for (unsigned char j : pairingData) {
-            if (j != 0x0) {
-                empty = false;
-                break;
-            }
-        }
-
-        if (empty) {
-            EEPROM.end();
-            return i;
-        }
-    }
-
-    EEPROM.end();
-    return -1;
 }
 
 bool HKStorage::isPaired() {
@@ -285,29 +307,4 @@ std::vector<Pairing *> HKStorage::getPairings() {
     }
     EEPROM.end();
     return pairings;
-}
-
-void HKStorage::writeString(uint16_t address, String data, uint16_t maxLength) {
-    EEPROM.begin(4096);
-    for (uint16_t i = 0; i < data.length() && (maxLength == 0 || i < maxLength); i++) {
-        EEPROM.write(address + i, data[i]);
-    }
-    if (maxLength == 0 || data.length() < maxLength) {
-        EEPROM.write(address + data.length(), '\0');
-    }
-    EEPROM.commit();
-    EEPROM.end();
-}
-
-String HKStorage::readString(uint16_t address, uint16_t maxLength) {
-    String data = String();
-    char k;
-    EEPROM.begin(4096);
-    k = EEPROM.read(address);
-    while (k != '\0' && (maxLength == 0 || data.length() < maxLength)) {
-        data += k;
-        k = EEPROM.read(address + data.length());
-    }
-    EEPROM.end();
-    return data;
 }

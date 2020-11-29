@@ -15,6 +15,7 @@
 #include "HKDefinitions.h"
 #include "HKServer.h"
 #include "HKCharacteristic.h"
+#include "HKStorage.h"
 
 const char json_200_response_headers[] =
         "HTTP/1.1 200 OK\r\n"

@@ -417,7 +417,7 @@ void HKClient::onPairSetup(const std::vector<byte> &body) {
     switch (value) {
         case 1: {
             HKLOGINFO("[HKClient::onPairSetup] Setup Step 1/3\r\n");
-            if (server->hk->getStorage()->isPaired()) {
+            if (HKStorage::isPaired()) {
                 HKLOGINFO("[HKClient::onPairSetup] Refuse to pair: Already paired\r\n");
 
                 sendTLVError(2, TLVErrorUnavailable);
@@ -557,13 +557,13 @@ void HKClient::onPairSetup(const std::vector<byte> &body) {
                 break;
             }
 
-            int result = server->hk->getStorage()->addPairing((char *) deviceId->getValue(), publicKey->getValue(), 1);
+            int result = HKStorage::addPairing((char *) deviceId->getValue(), publicKey->getValue(), 1);
             if (result) {
                 HKLOGERROR("[HKClient::onPairSetup] COULD NOT STORE PAIRING\r\n");
             }
 
             // M6 Response Generation
-            String accessoryId = server->hk->storage->getAccessoryId();
+            String accessoryId = HKStorage::getAccessoryId();
             size_t accessoryInfoSize = 32 + accessoryId.length() + 32;
             byte accessoryInfo[accessoryInfoSize];
             const char salt3[] = "Pair-Setup-Accessory-Sign-Salt";
@@ -572,14 +572,14 @@ void HKClient::onPairSetup(const std::vector<byte> &body) {
             delete server->hk->srp;
 
             memcpy(accessoryInfo + 32, accessoryId.c_str(), accessoryId.length());
-            memcpy(accessoryInfo + 32 + accessoryId.length(), server->hk->storage->getAccessoryKey().publicKey, 32);
+            memcpy(accessoryInfo + 32 + accessoryId.length(), HKStorage::getAccessoryKey().publicKey, 32);
 
             byte accessorySignature[64];
-            Ed25519::sign(accessorySignature, server->hk->storage->getAccessoryKey().privateKey, server->hk->storage->getAccessoryKey().publicKey, accessoryInfo, accessoryInfoSize);
+            Ed25519::sign(accessorySignature, HKStorage::getAccessoryKey().privateKey, HKStorage::getAccessoryKey().publicKey, accessoryInfo, accessoryInfoSize);
 
             std::vector<HKTLV *> responseMessage = {
                     new HKTLV(TLVTypeIdentifier, (byte *) accessoryId.c_str(), accessoryId.length()),
-                    new HKTLV(TLVTypePublicKey, server->hk->storage->getAccessoryKey().publicKey, 32),
+                    new HKTLV(TLVTypePublicKey, HKStorage::getAccessoryKey().publicKey, 32),
                     new HKTLV(TLVTypeSignature, accessorySignature, 64)
             };
             std::vector<byte> responseData = HKTLV::formatTLV(responseMessage);
@@ -642,7 +642,7 @@ void HKClient::onPairVerify(const std::vector<byte> &body) {
             crypto_scalarmult_curve25519_base(verifyContext->accessoryPublicKey, verifyContext->accessorySecretKey);
             crypto_scalarmult_curve25519(verifyContext->sharedKey, verifyContext->accessorySecretKey, verifyContext->devicePublicKey);
 
-            String accessoryId = server->hk->storage->getAccessoryId();
+            String accessoryId = HKStorage::getAccessoryId();
             size_t accessoryInfoSize = 32 + accessoryId.length() + 32;
             byte accessoryInfo[accessoryInfoSize];
             memcpy(accessoryInfo, verifyContext->accessoryPublicKey, 32);
@@ -650,7 +650,7 @@ void HKClient::onPairVerify(const std::vector<byte> &body) {
             memcpy(accessoryInfo + 32 + accessoryId.length(), verifyContext->devicePublicKey, 32);
 
             byte accessorySignature[64];
-            Ed25519::sign(accessorySignature, server->hk->storage->getAccessoryKey().privateKey, server->hk->storage->getAccessoryKey().publicKey, accessoryInfo, accessoryInfoSize);
+            Ed25519::sign(accessorySignature, HKStorage::getAccessoryKey().privateKey, HKStorage::getAccessoryKey().publicKey, accessoryInfo, accessoryInfoSize);
 
             std::vector<HKTLV *> subResponseMessage = {
                     new HKTLV(TLVTypeIdentifier, (byte *) accessoryId.c_str(), accessoryId.length()),
@@ -726,7 +726,7 @@ void HKClient::onPairVerify(const std::vector<byte> &body) {
                 break;
             }
 
-            Pairing *pairingItem = server->hk->getStorage()->findPairing((char *) deviceId->getValue());
+            Pairing *pairingItem = HKStorage::findPairing((char *) deviceId->getValue());
             if (!pairingItem) {
                 HKLOGINFO("[HKClient::onPairVerify] Device is not paired\r\n");
                 for (auto msg : decryptedMessage) {
@@ -792,7 +792,7 @@ void HKClient::onPairVerify(const std::vector<byte> &body) {
 void HKClient::onIdentify() {
     HKLOGINFO("[HKClient::onIdentify] Identify\r\n");
 
-    if (server->hk->getStorage()->isPaired()) {
+    if (HKStorage::isPaired()) {
         sendJSONErrorResponse(400, HAPStatusInsufficientPrivileges);
         return;
     }
@@ -1156,7 +1156,7 @@ void HKClient::onPairings(const std::vector<byte> &body) {
             }
 
             char *deviceIdentifier = strndup((const char *) deviceId->getValue(), deviceId->getSize());
-            Pairing *comparePairing = server->hk->getStorage()->findPairing(deviceIdentifier);
+            Pairing *comparePairing = HKStorage::findPairing(deviceIdentifier);
             if (comparePairing) {
                 if (devicePublicKey->getSize() != 32 || memcmp(devicePublicKey->getValue(), comparePairing->deviceKey, 32) != 0) {
                     HKLOGWARNING("[HKClient::onPairings] Failed to add pairing: pairing public key differs from given one\r\n");
@@ -1167,7 +1167,7 @@ void HKClient::onPairings(const std::vector<byte> &body) {
                 }
                 delete comparePairing;
 
-                if (server->hk->getStorage()->updatePairing(deviceIdentifier, *devicePermission->getValue())) {
+                if (HKStorage::updatePairing(deviceIdentifier, *devicePermission->getValue())) {
                     HKLOGWARNING("[HKClient::onPairings] Failed to add pairing: storage error\r\n");
                     free(deviceIdentifier);
                     sendTLVError(2, TLVErrorUnknown);
@@ -1176,7 +1176,7 @@ void HKClient::onPairings(const std::vector<byte> &body) {
 
                 HKLOGINFO("[HKClient::onPairings] Updated pairing with id=%s\r\n", deviceIdentifier);
             } else {
-                int r = server->hk->getStorage()->addPairing(deviceIdentifier, devicePublicKey->getValue(), *devicePermission->getValue());
+                int r = HKStorage::addPairing(deviceIdentifier, devicePublicKey->getValue(), *devicePermission->getValue());
                 if (r == -2) {
                     HKLOGWARNING("[HKClient::onPairings] Failed to add pairing: max peers\r\n");
                     free(deviceIdentifier);
@@ -1218,11 +1218,11 @@ void HKClient::onPairings(const std::vector<byte> &body) {
             }
 
             char *deviceIdentifier = strndup((const char *) deviceId->getValue(), deviceId->getSize());
-            Pairing *comparePairing = server->hk->getStorage()->findPairing(deviceIdentifier);
+            Pairing *comparePairing = HKStorage::findPairing(deviceIdentifier);
             if (comparePairing) {
                 bool isAdmin = comparePairing->permissions & PairingPermissionAdmin;
 
-                int result = server->hk->getStorage()->removePairing(deviceIdentifier);
+                int result = HKStorage::removePairing(deviceIdentifier);
                 if (result) {
                     delete comparePairing;
                     free(deviceIdentifier);
@@ -1233,7 +1233,7 @@ void HKClient::onPairings(const std::vector<byte> &body) {
 
                 HKLOGINFO("[HKClient::onPairings] Removed pairing with id=%s\r\n", deviceIdentifier);
 #if HKLOGLEVEL <= 1
-                for (auto pPairing : server->hk->getStorage()->getPairings()) {
+                for (auto pPairing : HKStorage::getPairings()) {
                     HKLOGINFO("[HKStorage] Pairing id=%i deviceId=%36s permissions=%i\r\n", pPairing->id, pPairing->deviceId, pPairing->permissions);
                 }
 #endif
@@ -1245,7 +1245,7 @@ void HKClient::onPairings(const std::vector<byte> &body) {
                 }
 
                 if (isAdmin) {
-                    if (!server->hk->getStorage()->hasPairedAdmin()) {
+                    if (!HKStorage::hasPairedAdmin()) {
                         HKLOGINFO("[HKClient::onPairings] Last admin pairing was removed, enabling pair setup\r\n");
                         server->setupMDNS();
                     }
@@ -1271,7 +1271,7 @@ void HKClient::onPairings(const std::vector<byte> &body) {
             };
 
             bool first = true;
-            std::vector<Pairing *> pairings = server->hk->getStorage()->getPairings();
+            std::vector<Pairing *> pairings = HKStorage::getPairings();
             for (auto pairingItem : pairings) {
                 if (!first) {
                     response.push_back(new HKTLV(TLVTypeSeparator, nullptr, 0));
