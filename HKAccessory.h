@@ -44,6 +44,7 @@ public:
     void addService(HKService *service);
 
     HKService *getService(HKServiceType serviceType);
+    std::vector<HKService *> getServices();
     HKAccessoryCategory getCategory() const;
     uint getId() const;
 private:

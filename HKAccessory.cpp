@@ -90,6 +90,15 @@ HKService *HKAccessory::getService(HKServiceType serviceType) {
 }
 
 /**
+ * @brief Get all services for accessory
+ * 
+ * @return std::vector<HKService *> all services
+ */
+std::vector<HKService *> HKAccessory::getServices() {
+    return services;
+}
+
+/**
  * @brief Get the id
  * 
  * @return uint id

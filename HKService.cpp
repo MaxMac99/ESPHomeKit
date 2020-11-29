@@ -67,6 +67,15 @@ HKCharacteristic *HKService::getCharacteristic(HKCharacteristicType characterist
 }
 
 /**
+ * @brief Get all characteristics for service
+ * 
+ * @return std::vector<HKCharacteristic *> all characteristics
+ */
+std::vector<HKCharacteristic *> HKService::getCharacteristics() {
+    return characteristics;
+}
+
+/**
  * @brief Get the service type
  * 
  * @return HKServiceType 
