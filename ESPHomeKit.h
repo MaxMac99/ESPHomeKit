@@ -38,6 +38,7 @@ public:
     void setup();
     void update();
     void reset();
+    void resetPairings();
 
     void saveSSID(const String& ssid, const String& wiFiPassword="");
     String getSSID();

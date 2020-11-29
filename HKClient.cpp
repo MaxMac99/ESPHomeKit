@@ -183,7 +183,7 @@ bool HKClient::received() {
 
             String keyString = searchStr.substring(0, keyEndPos);
             String valueString;
-            if ((unsigned int) keyEndPos < searchStr.length() && keyEndPos < nextPos) {
+            if ((uint) keyEndPos < searchStr.length() && keyEndPos < nextPos) {
                 valueString = searchStr.substring(keyEndPos + 1, nextPos);
             }
             queries.insert(std::make_pair(keyString, valueString));
@@ -849,7 +849,7 @@ void HKClient::onGetCharacteristics(String id, bool meta, bool perms, bool type,
         return;
     }
 
-    unsigned int format = 0;
+    uint format = 0;
     if (meta) {
         format |= HKCharacteristicFormatMeta;
     }
@@ -877,8 +877,8 @@ void HKClient::onGetCharacteristics(String id, bool meta, bool perms, bool type,
             iidPos = idCpy.length();
         }
 
-        unsigned int aid = idCpy.substring(0, aidPos).toInt();
-        unsigned int iid = idCpy.substring(aidPos + 1, iidPos).toInt();
+        uint aid = idCpy.substring(0, aidPos).toInt();
+        uint iid = idCpy.substring(aidPos + 1, iidPos).toInt();
         idCpy = idCpy.substring(iidPos + 1);
 
         if (server->hk->getAccessory()->getId() == aid) {
@@ -914,8 +914,8 @@ void HKClient::onGetCharacteristics(String id, bool meta, bool perms, bool type,
             iidPos = id.length();
         }
 
-        unsigned int aid = id.substring(0, aidPos).toInt();
-        unsigned int iid = id.substring(aidPos + 1, iidPos).toInt();
+        uint aid = id.substring(0, aidPos).toInt();
+        uint iid = id.substring(aidPos + 1, iidPos).toInt();
         id = id.substring(iidPos + 1);
 
         if (server->hk->getAccessory()->getId() == aid) {
@@ -984,7 +984,7 @@ void HKClient::onUpdateCharacteristics(const String &jsonBody) {
         return;
     }
 
-    unsigned int cursor = 20;
+    uint cursor = 20;
     while (jsonBody.length() > cursor) {
         int begin = jsonBody.indexOf('{', cursor);
         int end = jsonBody.indexOf('}', cursor);
@@ -1067,7 +1067,7 @@ void HKClient::onUpdateCharacteristics(const String &jsonBody) {
     send204Response();
 }
 
-HAPStatus HKClient::processUpdateCharacteristic(unsigned int aid, unsigned int iid, String ev, String value) {
+HAPStatus HKClient::processUpdateCharacteristic(uint aid, uint iid, String ev, String value) {
     HKAccessory *accessory = server->hk->getAccessory();
     if (accessory->getId() != aid) {
         HKLOGWARNING("[HKClient::processUpdateCharacteristic] Could not find accessory with id=%d\r\n", aid);

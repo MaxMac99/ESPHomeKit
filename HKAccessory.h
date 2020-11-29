@@ -44,8 +44,8 @@ public:
     void addService(HKService *service);
 
     HKService *getService(HKServiceType serviceType);
-    HKCharacteristic *findCharacteristic(unsigned int iid);
-    unsigned int getId() const;
+    HKCharacteristic *findCharacteristic(uint iid);
+    uint getId() const;
     HKAccessoryCategory getCategory() const;
 private:
     void prepareIDs();
@@ -55,7 +55,7 @@ private:
     friend HKClient;
     friend ESPHomeKit;
 private:
-    unsigned int id;
+    uint id;
     HKAccessoryCategory category;
     std::vector<HKService *> services;
 };

@@ -72,7 +72,7 @@ private:
     void onGetAccessories();
     void onGetCharacteristics(String id, bool meta, bool perms, bool type, bool ev);
     void onUpdateCharacteristics(const String &jsonBody);
-    HAPStatus processUpdateCharacteristic(unsigned int aid, unsigned int iid, String ev, String value);
+    HAPStatus processUpdateCharacteristic(uint aid, uint iid, String ev, String value);
     void onPairings(const std::vector<byte> &body);
     void onReset();
     void onResource();

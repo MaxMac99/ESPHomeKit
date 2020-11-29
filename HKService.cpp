@@ -126,7 +126,7 @@ void HKService::serializeToJSON(JSON &json, HKValue *value, HKClient *client) {
  * @param iid Characteristic ID to search for
  * @return HKCharacteristic* characteristic or nullptr
  */
-HKCharacteristic *HKService::findCharacteristic(unsigned int iid) {
+HKCharacteristic *HKService::findCharacteristic(uint iid) {
     for (auto ch : characteristics) {
         if (ch->getId() == iid) {
             return ch;

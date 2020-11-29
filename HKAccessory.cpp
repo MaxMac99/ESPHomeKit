@@ -92,9 +92,9 @@ HKService *HKAccessory::getService(HKServiceType serviceType) {
 /**
  * @brief Get the id
  * 
- * @return unsigned int id
+ * @return uint id
  */
-unsigned int HKAccessory::getId() const {
+uint HKAccessory::getId() const {
     return id;
 }
 
@@ -140,7 +140,7 @@ void HKAccessory::serializeToJSON(JSON &json, HKValue *value, HKClient *client) 
  * @param iid Characteristic ID to search for
  * @return HKCharacteristic* characteristic or nullptr
  */
-HKCharacteristic *HKAccessory::findCharacteristic(unsigned int iid) {
+HKCharacteristic *HKAccessory::findCharacteristic(uint iid) {
     for (auto service : services) {
         if (HKCharacteristic *result = service->findCharacteristic(iid)) {
             return result;
@@ -169,7 +169,7 @@ void HKAccessory::clearCallbackEvents(HKClient *client) {
 void HKAccessory::prepareIDs() {
     setup();
 
-    unsigned int iid = 1;
+    uint iid = 1;
     for (auto service: services) {
         service->id = iid++;
         for (auto characteristic : service->characteristics) {

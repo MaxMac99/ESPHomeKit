@@ -163,6 +163,14 @@ void ESPHomeKit::reset() {
 }
 
 /**
+ * @brief Reset EEPROM and restart ESP
+ * 
+ */
+void ESPHomeKit::resetPairings() {
+    storage->resetPairings();
+}
+
+/**
  * @brief Get ESPHomeKit storage manager
  * 
  * @return HKStorage* storage manager

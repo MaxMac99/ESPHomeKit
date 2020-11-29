@@ -19,7 +19,7 @@ void HKStorage::reset() {
     HKLOGINFO("[HKStorage::reset] Reset\r\n");
     writeString(STORAGE_CHECK_ADDR, STORAGE_CHECK, STORAGE_CHECK_LEN);
     EEPROM.begin(4096);
-    for (unsigned int i = STORAGE_CHECK_ADDR + STORAGE_CHECK_LEN; i < 4096; i++) {
+    for (uint i = STORAGE_CHECK_ADDR + STORAGE_CHECK_LEN; i < 4096; i++) {
         EEPROM.write(i, 0);
     }
     EEPROM.end();
@@ -27,7 +27,7 @@ void HKStorage::reset() {
 
 void HKStorage::resetPairings() {
     EEPROM.begin(4096);
-    for (unsigned int i = PAIRINGS_ADDR; i < 4096; i++) {
+    for (uint i = PAIRINGS_ADDR; i < 4096; i++) {
         EEPROM.write(i, 0);
     }
     EEPROM.end();

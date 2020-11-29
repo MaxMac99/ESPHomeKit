@@ -13,7 +13,7 @@
 
 
 HKCharacteristic::HKCharacteristic(HKCharacteristicType type, const HKValue &value, uint8_t permissions,
-                                   String description, HKFormat format, HKUnit unit, float *minValue, float *maxValue, float *minStep, unsigned int *maxLen, unsigned int *maxDataLen, HKValidValues validValues, HKValidValuesRanges validValuesRanges) : id(0), service(nullptr), type(type), value(value), permissions(permissions), description(std::move(description)), unit(unit), format(format), minValue(minValue), maxValue(maxValue), minStep(minStep), maxLen(maxLen), maxDataLen(maxDataLen), validValues(validValues), validValuesRanges(validValuesRanges), getter(nullptr), setter(nullptr), callback(nullptr) {
+                                   String description, HKFormat format, HKUnit unit, float *minValue, float *maxValue, float *minStep, uint *maxLen, uint *maxDataLen, HKValidValues validValues, HKValidValuesRanges validValuesRanges) : id(0), service(nullptr), type(type), value(value), permissions(permissions), description(std::move(description)), unit(unit), format(format), minValue(minValue), maxValue(maxValue), minStep(minStep), maxLen(maxLen), maxDataLen(maxDataLen), validValues(validValues), validValuesRanges(validValuesRanges), getter(nullptr), setter(nullptr), callback(nullptr) {
 
 }
 
@@ -44,11 +44,11 @@ const HKValue &HKCharacteristic::getValue() const {
     return value;
 }
 
-unsigned int HKCharacteristic::getId() const {
+uint HKCharacteristic::getId() const {
     return id;
 }
 
-void HKCharacteristic::serializeToJSON(JSON &json, HKValue *jsonValue, unsigned int jsonFormatOptions, HKClient *client) {
+void HKCharacteristic::serializeToJSON(JSON &json, HKValue *jsonValue, uint jsonFormatOptions, HKClient *client) {
     json.setString("iid");
     json.setInt(id);
 
@@ -388,7 +388,7 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
         case FormatString: {
             const char *result = jsonValue.c_str();
 
-            unsigned int checkMaxLen = maxLen ? *maxLen : 64;
+            uint checkMaxLen = maxLen ? *maxLen : 64;
             if (strlen(result) > checkMaxLen) {
                 HKLOGERROR("[HKCharacteristic::setValue] Failed to update (id=%d.%d, service=%s, type=%d): String is too long\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
                 return HAPStatusInvalidValue;
