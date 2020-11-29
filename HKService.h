@@ -33,8 +33,8 @@ public:
     HKServiceType getServiceType() const;
     HKAccessory *getAccessory();
     HKCharacteristic *getCharacteristic(HKCharacteristicType characteristicType);
+private:
     HKCharacteristic *findCharacteristic(uint iid);
-
     void serializeToJSON(JSON &json, HKValue *value, HKClient *client);
 
     friend HKAccessory;

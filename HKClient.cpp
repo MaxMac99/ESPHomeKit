@@ -829,8 +829,7 @@ void HKClient::onGetAccessories() {
     json.setString("accessories");
     json.startArray();
 
-    HKAccessory *accessory = server->hk->getAccessory();
-    accessory->serializeToJSON(json, nullptr, this);
+    server->hk->getAccessory()->serializeToJSON(json, nullptr, this);
 
     json.endArray();
 

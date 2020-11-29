@@ -44,13 +44,14 @@ public:
     void addService(HKService *service);
 
     HKService *getService(HKServiceType serviceType);
-    HKCharacteristic *findCharacteristic(uint iid);
-    uint getId() const;
     HKAccessoryCategory getCategory() const;
+    uint getId() const;
 private:
+    HKCharacteristic *findCharacteristic(uint iid);
     void prepareIDs();
     void clearCallbackEvents(HKClient *client);
     void serializeToJSON(JSON &json, HKValue *value, HKClient *client = nullptr);
+    
     friend HKServer;
     friend HKClient;
     friend ESPHomeKit;

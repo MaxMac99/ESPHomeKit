@@ -50,14 +50,14 @@ public:
 
     void setGetter(const std::function<HKValue()> &getter);
     void setSetter(const std::function<void(const HKValue)> &setter);
-
-    void serializeToJSON(JSON &json, HKValue *jsonValue, uint format = 0xF, HKClient *client = nullptr);
+    void notify(const HKValue& newValue);
+private:
     HAPStatus setValue(const String& jsonValue);
     HAPStatus setEvent(HKClient *client, const String& jsonValue);
     void addCallbackEvent(HKClient *client);
     void removeCallbackEvent(HKClient *client);
     bool hasCallbackEvent(HKClient *client);
-    void notify(const HKValue& newValue);
+    void serializeToJSON(JSON &json, HKValue *jsonValue, uint format = 0xF, HKClient *client = nullptr);
 
     friend HKAccessory;
     friend HKService;
