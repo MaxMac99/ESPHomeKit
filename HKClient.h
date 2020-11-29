@@ -17,18 +17,6 @@
 #include "HKCharacteristic.h"
 #include "HKStorage.h"
 
-const char json_200_response_headers[] =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: application/hap+json\r\n"
-        "Transfer-Encoding: chunked\r\n"
-        "Connection: keep-alive\r\n\r\n";
-
-const char json_207_response_headers[] =
-        "HTTP/1.1 207 Multi-Status\r\n"
-        "Content-Type: application/hap+json\r\n"
-        "Transfer-Encoding: chunked\r\n"
-        "Connection: keep-alive\r\n\r\n";
-
 struct VerifyContext {
     byte accessorySecretKey[32];
     byte sharedKey[32];

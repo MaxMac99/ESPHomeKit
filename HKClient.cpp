@@ -822,7 +822,11 @@ void HKClient::onIdentify() {
 void HKClient::onGetAccessories() {
     HKLOGINFO("[HKClient::onGetAccessories] Get Accessories\r\n");
 
-    send((byte *) json_200_response_headers, sizeof(json_200_response_headers) - 1);
+    String json_200_response_headers = F("HTTP/1.1 200 OK\r\n"
+                                         "Content-Type: application/hap+json\r\n"
+                                         "Transfer-Encoding: chunked\r\n"
+                                         "Connection: keep-alive\r\n\r\n");
+    send((byte *) json_200_response_headers.c_str(), json_200_response_headers.length() - 1);
 
     JSON json = JSON(1024, std::bind(&HKClient::sendChunk, this, std::placeholders::_1, std::placeholders::_2));
     json.startObject();
@@ -896,9 +900,17 @@ void HKClient::onGetCharacteristics(String id, bool meta, bool perms, bool type,
     }
 
     if (success) {
-        send((byte *) json_200_response_headers, sizeof(json_200_response_headers) - 1);
+        String json_200_response_headers = F("HTTP/1.1 200 OK\r\n"
+                                            "Content-Type: application/hap+json\r\n"
+                                            "Transfer-Encoding: chunked\r\n"
+                                            "Connection: keep-alive\r\n\r\n");
+        send((byte *) json_200_response_headers.c_str(), json_200_response_headers.length() - 1);
     } else {
-        send((byte *) json_207_response_headers, sizeof(json_207_response_headers) - 1);
+        String json_207_response_headers = F("HTTP/1.1 207 Multi-Status\r\n"
+                                             "Content-Type: application/hap+json\r\n"
+                                             "Transfer-Encoding: chunked\r\n"
+                                             "Connection: keep-alive\r\n\r\n");
+        send((byte *) json_207_response_headers.c_str(), json_207_response_headers.length() - 1);
     }
 
     JSON json = JSON(1024, std::bind(&HKClient::sendChunk, this, std::placeholders::_1, std::placeholders::_2));
