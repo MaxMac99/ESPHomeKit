@@ -21,8 +21,7 @@
  */
 HKService::HKService(HKServiceType type, bool hidden, bool primary, String name) : id(0), accessory(nullptr), serviceType(type), hidden(hidden), primary(primary) {
     if (name != "") {
-        auto nameChar = new HKCharacteristic(HKCharacteristicName, HKValue(FormatString, name), PermissionPairedRead, "Name", FormatString);
-        addCharacteristic(nameChar);
+        setName(name);
     }
 }
 

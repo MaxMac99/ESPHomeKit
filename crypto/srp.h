@@ -41,7 +41,7 @@ extern srp_keys_t srp;
 
 typedef void (*moretime_t)(void);
 
-extern void srp_init(void);
+extern void srp_init(const char *pinMessage);
 extern void srp_start(void);
 extern uint8_t srp_setA(uint8_t* a, uint16_t length, moretime_t moretime);
 extern uint8_t srp_checkM1(uint8_t* m1, uint16_t length);
@@ -49,6 +49,8 @@ extern uint8_t* srp_getSalt(void);
 extern uint8_t* srp_getB(void);
 extern uint8_t* srp_getM2(void);
 extern uint8_t* srp_getK(void);
+
+extern char *srp_pinMessage(void);
 
 extern void crypto_sha512hmac(uint8_t* hash, uint8_t* salt, uint8_t salt_length, uint8_t* data, uint8_t data_length);
 

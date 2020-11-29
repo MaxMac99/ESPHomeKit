@@ -148,10 +148,13 @@ int HKServer::setupMDNS() {
         return false;
     }
 
-#ifdef HKSETUPID
-        char *data = (char *) malloc(22);
-        snprintf(data, 22, "%s%s", HKSETUPID, hk->getAccessoryId().c_str());
-        data[21] = 0;
+    #ifdef HKSETUPID
+    String setupId = HKSETUPID;
+    if (setupId.length() == 4) {
+        size_t dataSize = setupId.length() + hk->getAccessoryId().length() + 1;
+        char *data = (char *) malloc(dataSize);
+        snprintf(data, dataSize, "%s%s", setupId.c_str(), hk->getAccessoryId().c_str());
+        data[dataSize-1] = 0;
 
         unsigned char shaHash[64];
         SHA512 sha512 = SHA512();
@@ -167,7 +170,8 @@ int HKServer::setupMDNS() {
             HKLOGERROR("[HKServer::setupMDNS] Failed to add ci category\r\n");
             return false;
         }
-#endif
+    }
+    #endif
 
     return true;
 }

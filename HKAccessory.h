@@ -33,12 +33,14 @@ class ESPHomeKit;
  */
 class HKAccessory {
 public:
+    explicit HKAccessory(HKAccessoryCategory category=HKAccessoryOther);
     explicit HKAccessory(const String &accessoryName, const String &modelName, const String &firmwareRevision, HKAccessoryCategory category=HKAccessoryOther);
 
     virtual void identify() {};
     virtual void run() = 0;
     virtual void setup() = 0;
 
+    void addInfoService(const String& accName, const String& manufacturerName, const String& modelName, const String& serialNumber, const String &firmwareRevision);
     void addService(HKService *service);
 
     HKService *getService(HKServiceType serviceType);

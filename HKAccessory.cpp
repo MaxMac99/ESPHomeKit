@@ -7,12 +7,33 @@
 /**
  * @brief Construct a new HKAccessory::HKAccessory object
  * 
+ * @param category Look up your Category in HKDefinitions.h or Apples HAP Documentation
+ */
+HKAccessory::HKAccessory(HKAccessoryCategory category) : id(1), category(category) {
+}
+
+/**
+ * @brief Construct a new HKAccessory::HKAccessory object
+ * 
  * @param accessoryName Sets name of the Accessory Info Service
  * @param modelName Sets model name of the Accessory Info Service
  * @param firmwareRevision Sets firmware revision of the Accessory Info SErvice
  * @param category Look up your Category in HKDefinitions.h or Apples HAP Documentation
  */
 HKAccessory::HKAccessory(const String &accessoryName, const String &modelName, const String &firmwareRevision, HKAccessoryCategory category) : id(1), category(category) {
+    addInfoService(accessoryName, "MaxMac Co.", modelName, String(ESP.getChipId()), firmwareRevision);
+}
+
+/**
+ * @brief Add the Info Service to your accessory. For more information have a look at Apples HAP Documentation
+ * 
+ * @param accName Accessory name
+ * @param manufacturerName name of the manufacturer
+ * @param modelName Model name
+ * @param serialNumber Serial number
+ * @param firmwareRevision Firmware revision
+ */
+void HKAccessory::addInfoService(const String& accName, const String& manufacturerName, const String& modelName, const String& serialNumber, const String &firmwareRevision) {
     auto *infoService = new HKService(HKServiceType::HKServiceAccessoryInfo);
     addService(infoService);
 
@@ -29,7 +50,7 @@ HKAccessory::HKAccessory(const String &accessoryName, const String &modelName, c
     HKCharacteristic *modelChar = new HKCharacteristic(HKCharacteristicModelName, modelValue, PermissionPairedRead, "Model", FormatString);
     infoService->addCharacteristic(modelChar);
 
-    HKValue nameValue = HKValue(FormatString, accessoryName);
+    HKValue nameValue = HKValue(FormatString, accName);
     HKCharacteristic *nameChar = new HKCharacteristic(HKCharacteristicName, nameValue, PermissionPairedRead, "Name", FormatString);
     infoService->addCharacteristic(nameChar);
 

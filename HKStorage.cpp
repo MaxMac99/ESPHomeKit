@@ -44,12 +44,9 @@ String HKStorage::getAccessoryId() {
             generate = false;
         }
         if (number < 0x10) {
-            result += "0" + String(number, HEX);
+            result += "0" + String(number, HEX) + ":";
         } else {
-            result += String(number, HEX);
-        }
-        if (i < 5) {
-            result += ":";
+            result += String(number, HEX) + ":";
         }
     }
     EEPROM.end();
@@ -99,12 +96,9 @@ String HKStorage::generateAccessoryId() {
         uint8_t number = (uint8_t) random(0xFF);
         EEPROM.write(ACCESSORY_ID_ADDR + i, number);
         if (number < 0x10) {
-            result += "0" + String(number, HEX);
+            result += "0" + String(number, HEX) + ":";
         } else {
-            result += String(number, HEX);
-        }
-        if (i < 5) {
-            result += ":";
+            result += String(number, HEX) + ":";
         }
     }
     result.toUpperCase();
