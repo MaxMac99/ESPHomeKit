@@ -368,14 +368,11 @@ void HKClient::sendEncrypted(byte *message, size_t messageSize) {
 
 void HKClient::sendTLVResponse(std::vector<HKTLV *> &message) {
     std::vector<byte> payload = HKTLV::formatTLV(message);
-
-    String httpHeaders = "HTTP/1.1 200 OK\r\n"
+    String httpHeaders = F("HTTP/1.1 200 OK\r\n"
                          "Content-Type: application/pairing+tlv8\r\n"
-                         "Content-Length: " +
-                         String(payload.size()) +
-                         "\r\n"
-                         "Connection: keep-alive\r\n\r\n";
-
+                         "Content-Length: %d\r\n"
+                         "Connection: keep-alive\r\n\r\n");
+    httpHeaders.replace("%d", String(payload.size()));
     uint8_t response[httpHeaders.length() + payload.size()];
 
     memcpy(response, httpHeaders.c_str(), httpHeaders.length());
@@ -436,15 +433,15 @@ void HKClient::onPairSetup(const std::vector<byte> &body) {
             }
             pairing = true;
 
-            srp_start();
+            server->hk->srp->start();
 
             for (auto it = message.begin(); it != message.end();) {
                 delete *it;
                 it = message.erase(it);
             }
             message.push_back(new HKTLV(TLVTypeState, 2, 1));
-            message.push_back(new HKTLV(TLVTypePublicKey, srp_getB(), 384));
-            message.push_back(new HKTLV(TLVTypeSalt, srp_getSalt(), 16));
+            message.push_back(new HKTLV(TLVTypePublicKey, server->hk->srp->getB(), 384));
+            message.push_back(new HKTLV(TLVTypeSalt, server->hk->srp->getSalt(), 16));
 
             sendTLVResponse(message);
             break;
@@ -460,15 +457,15 @@ void HKClient::onPairSetup(const std::vector<byte> &body) {
                 break;
             }
 
-            srp_setA(publicKey->getValue(), publicKey->getSize(), nullptr);
+            server->hk->srp->setA(publicKey->getValue(), publicKey->getSize(), nullptr);
 
-            if (srp_checkM1(proof->getValue(), proof->getSize())) {
+            if (server->hk->srp->checkM1(proof->getValue(), proof->getSize())) {
                 for (auto it = message.begin(); it != message.end();) {
                     delete *it;
                     it = message.erase(it);
                 }
                 message.push_back(new HKTLV(TLVTypeState, 4, 1));
-                message.push_back(new HKTLV(TLVTypeProof, srp_getM2(), 64));
+                message.push_back(new HKTLV(TLVTypeProof, server->hk->srp->getM2(), 64));
 
                 sendTLVResponse(message);
             } else {
@@ -485,7 +482,7 @@ void HKClient::onPairSetup(const std::vector<byte> &body) {
             byte sharedSecret[32];
             const char salt1[] = "Pair-Setup-Encrypt-Salt";
             const char info1[] = "Pair-Setup-Encrypt-Info\001";
-            hkdf(sharedSecret, srp_getK(), 64, (uint8_t *) salt1, sizeof(salt1)-1, (uint8_t *) info1, sizeof(info1)-1);
+            hkdf(sharedSecret, server->hk->srp->getK(), 64, (uint8_t *) salt1, sizeof(salt1)-1, (uint8_t *) info1, sizeof(info1)-1);
 
             HKTLV *encryptedTLV = HKTLV::findTLV(message, TLVTypeEncryptedData);
             if (!encryptedTLV) {
@@ -542,7 +539,7 @@ void HKClient::onPairSetup(const std::vector<byte> &body) {
             byte deviceX[32];
             const char salt2[] = "Pair-Setup-Controller-Sign-Salt";
             const char info2[] = "Pair-Setup-Controller-Sign-Info\001";
-            hkdf(deviceX, srp_getK(), 64, (uint8_t *) salt2, sizeof(salt2)-1, (uint8_t *) info2, sizeof(info2)-1);
+            hkdf(deviceX, server->hk->srp->getK(), 64, (uint8_t *) salt2, sizeof(salt2)-1, (uint8_t *) info2, sizeof(info2)-1);
 
             uint64_t deviceInfoSize = sizeof(deviceX) + deviceId->getSize() + publicKey->getSize();
             byte deviceInfo[deviceInfoSize];
@@ -571,7 +568,8 @@ void HKClient::onPairSetup(const std::vector<byte> &body) {
             byte accessoryInfo[accessoryInfoSize];
             const char salt3[] = "Pair-Setup-Accessory-Sign-Salt";
             const char info3[] = "Pair-Setup-Accessory-Sign-Info\001";
-            hkdf(accessoryInfo, srp_getK(), 64, (uint8_t *) salt3, sizeof(salt3)-1, (uint8_t *) info3, sizeof(info3)-1);
+            hkdf(accessoryInfo, server->hk->srp->getK(), 64, (uint8_t *) salt3, sizeof(salt3)-1, (uint8_t *) info3, sizeof(info3)-1);
+            delete server->hk->srp;
 
             memcpy(accessoryInfo + 32, accessoryId.c_str(), accessoryId.length());
             memcpy(accessoryInfo + 32 + accessoryId.length(), server->hk->storage->getAccessoryKey().publicKey, 32);

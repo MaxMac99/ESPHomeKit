@@ -58,6 +58,7 @@ private:
     HKStorage *storage;
     HKServer *server;
     HKAccessory *accessory;
+    Srp *srp;
 
     int configNumber;
 };

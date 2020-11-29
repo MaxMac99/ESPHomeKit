@@ -14,7 +14,7 @@
 #include "srp.h"
 
 #define E(V)  (((V) << 24) | ((V) >> 24) | (((V) >> 8) & 0x0000FF00) | (((V) << 8) & 0x00FF0000))
-static const uint32_t srp_N[] =
+static const uint32_t srp_N[] PROGMEM =
         {
                 E(0xFFFFFFFF), E(0xFFFFFFFF), E(0xC90FDAA2), E(0x2168C234), E(0xC4C6628B), E(0x80DC1CD1), E(0x29024E08),
                 E(0x8A67CC74), E(0x020BBEA6), E(0x3B139B22), E(0x514A0879), E(0x8E3404DD), E(0xEF9519B3), E(0xCD3A431B),
@@ -33,18 +33,18 @@ static const uint32_t srp_N[] =
         };
 #undef E
 
-static const uint8_t zeros64[64];
-static const uint32_t srp_N_sizeof = 384;
-static const uint8_t srp_G = 5;
+#define srp_N_sizeof 384
+#define srp_G 5
+
 // Pre-compute hashes where we can
-static const uint8_t srp_N_G_hash[] =
+static const uint8_t srp_N_G_hash[] PROGMEM =
         {
                 0xA9, 0xC2, 0xE2, 0x55, 0x9B, 0xF0, 0xEB, 0xB5, 0x3F, 0x0C, 0xBB, 0xF6, 0x22, 0x82, 0x90, 0x6B,
                 0xED, 0xE7, 0xF2, 0x18, 0x2F, 0x00, 0x67, 0x82, 0x11, 0xFB, 0xD5, 0xBD, 0xE5, 0xB2, 0x85, 0x03,
                 0x3A, 0x49, 0x93, 0x50, 0x3B, 0x87, 0x39, 0x7F, 0x9B, 0xE5, 0xEC, 0x02, 0x08, 0x0F, 0xED, 0xBC,
                 0x08, 0x35, 0x58, 0x7A, 0xD0, 0x39, 0x06, 0x08, 0x79, 0xB8, 0x62, 0x1E, 0x8C, 0x36, 0x59, 0xE0
         };
-static const uint8_t srp_N_hash_srp_G_hash[] =
+static const uint8_t srp_N_hash_srp_G_hash[] PROGMEM =
         {
                 0xB3, 0xD6, 0x3E, 0xF6, 0xAA, 0xFB, 0x2E, 0x97, 0x96, 0xDA, 0xE0, 0x06, 0xFE, 0x60, 0xF2, 0x0E,
                 0x53, 0x26, 0xFE, 0x1E, 0x1C, 0x52, 0xA5, 0x02, 0x1E, 0xB2, 0x17, 0x47, 0xCA, 0x33, 0xDF, 0xEA,
@@ -52,9 +52,7 @@ static const uint8_t srp_N_hash_srp_G_hash[] =
                 0x68, 0x3C, 0x9E, 0x78, 0x32, 0x96, 0xDD, 0x16, 0x93, 0xEB, 0xC7, 0x1C, 0xF5, 0xA5, 0x3D, 0xA3
         };
 
-srp_keys_t srp;
-
-static char pinMessage[21] = "Pair-Setup:";
+const char pinMessage[] PROGMEM = "Pair-Setup:";
 
 static void MPI_ERROR_CHECK(int CODE)
 {
@@ -67,14 +65,9 @@ static void MPI_ERROR_CHECK(int CODE)
     }
 }
 
-char *srp_pinMessage(void) {
-    return pinMessage;
-}
-
-void srp_init(const char *pincode)
+Srp::Srp(const char *pincode)
 {
     int err_code;
-    strcat(pinMessage, pincode);
 
     // The MPI library uses a ridiculous amount of memory. We use the stack allocator
     // so we don't tie this memory up except when we absolutely need to.
@@ -82,19 +75,24 @@ void srp_init(const char *pincode)
     //mbedtls_memory_buffer_alloc_init(memory, sizeof(memory));
 
     // Generate salt
-    os_get_random(srp.salt, sizeof(srp.salt));
-    //random_create(srp.salt, sizeof(srp.salt));
+    os_get_random(srp_salt, sizeof(srp_salt));
+    //random_create(srp_salt, sizeof(srp_salt));
 
     // Generate 'b' - a random value
-    os_get_random(srp.b, 32);
+    os_get_random(srp_b, 32);
 
     // Calculate 'x' = H(s | H(I | ":" | P))
     mbedtls_mpi x;
     mbedtls_mpi_init(&x);
     {
-        uint8_t message[sizeof(srp.salt) + 64];
-        memcpy(message, srp.salt, sizeof(srp.salt));
-        crypto_hash_sha512(message + sizeof(srp.salt), (uint8_t *) pinMessage, sizeof(pinMessage));
+        uint8_t message[sizeof(srp_salt) + 64];
+        memcpy(message, srp_salt, sizeof(srp_salt));
+
+        char pinMessageCopy[21];
+        memcpy_P(pinMessageCopy, pinMessage, 12);
+        strcat(pinMessageCopy, pincode);
+
+        crypto_hash_sha512(message + sizeof(srp_salt), (uint8_t *)pinMessageCopy, sizeof(pinMessageCopy));
         crypto_hash_sha512(message, message, sizeof(message));
         err_code = mbedtls_mpi_read_binary(&x, message, 64);
         MPI_ERROR_CHECK(err_code);
@@ -108,8 +106,11 @@ void srp_init(const char *pincode)
 
     mbedtls_mpi n;
     mbedtls_mpi_init(&n);
-    err_code = mbedtls_mpi_read_binary(&n, (uint8_t*)srp_N, srp_N_sizeof);
+    uint32_t *srp_N_buf = (uint32_t *)malloc(sizeof(uint32_t) * srp_N_sizeof);
+    memcpy_P(srp_N_buf, srp_N, srp_N_sizeof);
+    err_code = mbedtls_mpi_read_binary(&n, (uint8_t*)srp_N_buf, srp_N_sizeof);
     MPI_ERROR_CHECK(err_code);
+    free(srp_N_buf);
 
     mbedtls_mpi tmp;
     mbedtls_mpi_init(&tmp);
@@ -121,8 +122,11 @@ void srp_init(const char *pincode)
     // Calculate 'k'
     mbedtls_mpi k;
     mbedtls_mpi_init(&k);
-    err_code = mbedtls_mpi_read_binary(&k, srp_N_G_hash, sizeof(srp_N_G_hash));
+    uint8_t *srp_N_G_hash_buf = (uint8_t *)malloc(sizeof(srp_N_G_hash));
+    memcpy_P(srp_N_G_hash_buf, srp_N_G_hash, sizeof(srp_N_G_hash));
+    err_code = mbedtls_mpi_read_binary(&k, srp_N_G_hash_buf, sizeof(srp_N_G_hash));
     MPI_ERROR_CHECK(err_code);
+    free(srp_N_G_hash_buf);
 
     // Calculate 'B' = k*v + g^b % N
     mbedtls_mpi B;
@@ -130,13 +134,13 @@ void srp_init(const char *pincode)
     err_code = mbedtls_mpi_mul_mpi(&B, &k, &v);
     MPI_ERROR_CHECK(err_code);
 
-    err_code = mbedtls_mpi_write_binary(&v, srp.v, sizeof(srp.v));
+    err_code = mbedtls_mpi_write_binary(&v, srp_v, sizeof(srp_v));
     MPI_ERROR_CHECK(err_code);
     mbedtls_mpi_free(&v);
 
     mbedtls_mpi b;
     mbedtls_mpi_init(&b);
-    err_code = mbedtls_mpi_read_binary(&b, srp.b, sizeof(srp.b));
+    err_code = mbedtls_mpi_read_binary(&b, srp_b, sizeof(srp_b));
     MPI_ERROR_CHECK(err_code);
 
     err_code = mbedtls_mpi_exp_mod(&x, &g, &b, &n, &tmp);
@@ -145,7 +149,7 @@ void srp_init(const char *pincode)
     MPI_ERROR_CHECK(err_code);
     err_code = mbedtls_mpi_mod_mpi(&B, &B, &n);
     MPI_ERROR_CHECK(err_code);
-    err_code = mbedtls_mpi_write_binary(&B, srp.B, sizeof(srp.B));
+    err_code = mbedtls_mpi_write_binary(&B, srp_B, sizeof(srp_B));
     MPI_ERROR_CHECK(err_code);
 
     mbedtls_mpi_free(&b);
@@ -159,13 +163,13 @@ void srp_init(const char *pincode)
     //mbedtls_memory_buffer_alloc_free();
 }
 
-void srp_start(void)
+void Srp::start()
 {
-    srp.clientM1 = 0;
-    srp.serverM1 = 0;
+    srp_clientM1 = 0;
+    srp_serverM1 = 0;
 }
 
-uint8_t srp_setA(uint8_t* abuf, uint16_t length, moretime_t moretime)
+uint8_t Srp::setA(uint8_t* abuf, uint16_t length, moretime_t moretime)
 {
     int err_code;
 
@@ -181,17 +185,20 @@ uint8_t srp_setA(uint8_t* abuf, uint16_t length, moretime_t moretime)
 
         mbedtls_mpi n;
         mbedtls_mpi_init(&n);
-        err_code = mbedtls_mpi_read_binary(&n, (uint8_t*)srp_N, srp_N_sizeof);
+        uint32_t *srp_N_buf = (uint32_t *)malloc(sizeof(uint32_t) * srp_N_sizeof);
+        memcpy_P(srp_N_buf, srp_N, srp_N_sizeof);
+        err_code = mbedtls_mpi_read_binary(&n, (uint8_t*)srp_N_buf, srp_N_sizeof);
         MPI_ERROR_CHECK(err_code);
+        free(srp_N_buf);
 
         {
             // u = H(A | B)
             mbedtls_mpi u;
             mbedtls_mpi_init(&u);
             {
-                uint8_t message[length + sizeof(srp.B)];
+                uint8_t message[length + sizeof(srp_B)];
                 memcpy(message, abuf, length);
-                memcpy(message + length, srp.B, sizeof(srp.B));
+                memcpy(message + length, srp_B, sizeof(srp_B));
                 crypto_hash_sha512(message, message, sizeof(message));
 
                 err_code = mbedtls_mpi_read_binary(&u, message, 64);
@@ -200,7 +207,7 @@ uint8_t srp_setA(uint8_t* abuf, uint16_t length, moretime_t moretime)
 
             mbedtls_mpi v;
             mbedtls_mpi_init(&v);
-            err_code = mbedtls_mpi_read_binary(&v, srp.v, sizeof(srp.v));
+            err_code = mbedtls_mpi_read_binary(&v, srp_v, sizeof(srp_v));
             MPI_ERROR_CHECK(err_code);
 
             // getS = (A * v^u mod N)^b mod N
@@ -229,7 +236,7 @@ uint8_t srp_setA(uint8_t* abuf, uint16_t length, moretime_t moretime)
 
             mbedtls_mpi b;
             mbedtls_mpi_init(&b);
-            err_code = mbedtls_mpi_read_binary(&b, srp.b, sizeof(srp.b));
+            err_code = mbedtls_mpi_read_binary(&b, srp_b, sizeof(srp_b));
             MPI_ERROR_CHECK(err_code);
 
             err_code = mbedtls_mpi_exp_mod(&s, &s, &b, &n, NULL);
@@ -246,87 +253,94 @@ uint8_t srp_setA(uint8_t* abuf, uint16_t length, moretime_t moretime)
 
         mbedtls_mpi_free(&s);
 
-        crypto_hash_sha512(srp.K, sbuf, sizeof(sbuf));
+        crypto_hash_sha512(srp_K, sbuf, sizeof(sbuf));
     }
 
     //mbedtls_memory_buffer_alloc_free();
 
-    // getM1 - username s abuf srp.B K
+    // getM1 - username s abuf srp_B K
     {
-        uint8_t message[sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp.salt) + length + 384 + sizeof(srp.K)];
+        uint8_t message[sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp_salt) + length + 384 + sizeof(srp_K)];
+        uint8_t *srp_N_hash_srp_G_hash_buf = (uint8_t *)malloc(sizeof(srp_N_hash_srp_G_hash));
+        memcpy_P(srp_N_hash_srp_G_hash_buf, srp_N_hash_srp_G_hash, sizeof(srp_N_hash_srp_G_hash));
         memcpy(message, srp_N_hash_srp_G_hash, sizeof(srp_N_hash_srp_G_hash));
-        crypto_hash_sha512(message + sizeof(srp_N_hash_srp_G_hash), (uint8_t *) pinMessage, 10); // First 10 chars only - not the PIN part
-        memcpy(message + sizeof(srp_N_hash_srp_G_hash) + 64, srp.salt, sizeof(srp.salt));
-        memcpy(message + sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp.salt), abuf, length);
-        memcpy(message + sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp.salt) + length, srp.B, sizeof(srp.B));
-        memcpy(message + sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp.salt) + length + 384, srp.K, sizeof(srp.K));
-        srp.serverM1 = 1;
-        if (srp.clientM1)
+        free(srp_N_hash_srp_G_hash_buf);
+
+        char pinMessageCopy[10];
+        memcpy_P(pinMessageCopy, pinMessage, 10);
+
+        crypto_hash_sha512(message + sizeof(srp_N_hash_srp_G_hash), (uint8_t *) pinMessageCopy, 10); // First 10 chars only - not the PIN part
+        memcpy(message + sizeof(srp_N_hash_srp_G_hash) + 64, srp_salt, sizeof(srp_salt));
+        memcpy(message + sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp_salt), abuf, length);
+        memcpy(message + sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp_salt) + length, srp_B, sizeof(srp_B));
+        memcpy(message + sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp_salt) + length + 384, srp_K, sizeof(srp_K));
+        srp_serverM1 = 1;
+        if (srp_clientM1)
         {
             uint8_t hash[64];
             crypto_hash_sha512(hash, message, sizeof(message));
-            if (memcmp(hash, srp.M1, sizeof(srp.M1)) != 0)
+            if (memcmp(hash, srp_M1, sizeof(srp_M1)) != 0)
             {
                 return 0;
             }
         }
         else
         {
-            crypto_hash_sha512(srp.M1, message, sizeof(message));
+            crypto_hash_sha512(srp_M1, message, sizeof(message));
         }
     }
 
     // getM2
     {
-        uint8_t message[length + sizeof(srp.M1) + sizeof(srp.K)];
+        uint8_t message[length + sizeof(srp_M1) + sizeof(srp_K)];
         memcpy(message, abuf, length);
-        memcpy(message + length, srp.M1, sizeof(srp.M1));
-        memcpy(message + length + sizeof(srp.M1), srp.K, sizeof(srp.K));
-        crypto_hash_sha512(srp.M2, message, sizeof(message));
+        memcpy(message + length, srp_M1, sizeof(srp_M1));
+        memcpy(message + length + sizeof(srp_M1), srp_K, sizeof(srp_K));
+        crypto_hash_sha512(srp_M2, message, sizeof(message));
     }
 
     return 1;
 }
 
-uint8_t* srp_getSalt(void)
+uint8_t* Srp::getSalt(void)
 {
-    return srp.salt;
+    return srp_salt;
 }
 
-uint8_t* srp_getB(void)
+uint8_t* Srp::getB(void)
 {
-    return srp.B;
+    return srp_B;
 }
 
-uint8_t srp_checkM1(uint8_t* m1, uint16_t length)
+uint8_t Srp::checkM1(uint8_t* m1, uint16_t length)
 {
-    srp.clientM1 = 1;
-    if (length != sizeof(srp.M1))
+    srp_clientM1 = 1;
+    if (length != sizeof(srp_M1))
     {
         return 0;
     }
-    if (srp.serverM1)
+    if (srp_serverM1)
     {
-        if (memcmp(srp.M1, m1, sizeof(srp.M1)) != 0)
+        if (memcmp(srp_M1, m1, sizeof(srp_M1)) != 0)
         {
             return 0;
         }
     }
     else
     {
-        memcpy(srp.M1, m1, sizeof(srp.M1));
+        memcpy(srp_M1, m1, sizeof(srp_M1));
     }
     return 1;
 }
 
-uint8_t* srp_getM2(void)
+uint8_t* Srp::getM2(void)
 {
-    return srp.M2;
+    return srp_M2;
 }
 
-uint8_t* srp_getK(void)
+uint8_t* Srp::getK(void)
 {
-    return srp.K;
+    return srp_K;
 }
 
 void crypto_sha512hmac(uint8_t* hash, uint8_t* salt, uint8_t salt_length, uint8_t* data, uint8_t data_length)
@@ -354,6 +368,8 @@ void crypto_hkdf(uint8_t* target, uint8_t* salt, uint8_t salt_length, uint8_t* i
 
 uint8_t crypto_verifyAndDecrypt(const uint8_t* key, uint8_t* nonce, uint8_t* encrypted, uint8_t length, uint8_t* output_buf, uint8_t* mac)
 {
+    uint8_t zeros64[64];
+    memset(zeros64, 0, 64);
     uint8_t polykey[sizeof(zeros64)];
     crypto_stream_chacha20_xor(polykey, zeros64, sizeof(zeros64), nonce, key, 0);
 
@@ -378,6 +394,8 @@ uint8_t crypto_verifyAndDecrypt(const uint8_t* key, uint8_t* nonce, uint8_t* enc
 
 void crypto_encryptAndSeal(const uint8_t* key, uint8_t* nonce, uint8_t* plain, uint16_t length, uint8_t* output_buf, uint8_t* output_mac)
 {
+    uint8_t zeros64[64];
+    memset(zeros64, 0, 64);
     uint8_t polykey[sizeof(zeros64)];
     crypto_stream_chacha20_xor(polykey, zeros64, sizeof(zeros64), nonce, key, 0);
 

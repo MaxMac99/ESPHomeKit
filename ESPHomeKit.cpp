@@ -41,9 +41,11 @@ void ESPHomeKit::setup() {
     }
 #endif
 
-    srp_init(String(HKPASSWORD).c_str());
+    if (!storage->isPaired()) {
+        srp = new Srp(String(HKPASSWORD).c_str());
+    }
 
-    HKLOGINFO("[ESPHomeKit::setup] Password: %s\r\n", (char *) srp_pinMessage() + 11);
+    HKLOGINFO("[ESPHomeKit::setup] Password: %s\r\n", HKPASSWORD);
 
     accessory->prepareIDs();
 
