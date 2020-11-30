@@ -12,6 +12,8 @@
 #ifndef HAP_SERVER_HKCHARACTERISTIC_H
 #define HAP_SERVER_HKCHARACTERISTIC_H
 
+#define HKCHARACTERISTIC_CLASS_ID 0
+
 #include <Arduino.h>
 #include "JSON/JSON.h"
 #include <ArduinoJson.h>
@@ -41,8 +43,8 @@ class HKCharacteristic {
 public:
     HKCharacteristic(HKCharacteristicType type, const HKValue &value, uint8_t permissions,
                      String description, HKFormat format, HKUnit unit=UnitNone, float *minValue=nullptr, float *maxValue=nullptr, float *minStep=nullptr, uint *maxLen=nullptr, uint *maxDataLen=nullptr, HKValidValues validValues=HKValidValues(), HKValidValuesRanges validValuesRanges=HKValidValuesRanges());
-
     virtual ~HKCharacteristic();
+    virtual uint getClassId() { return HKCHARACTERISTIC_CLASS_ID; };
 
     uint getId() const;
     HKCharacteristicType getType() const;

@@ -12,6 +12,8 @@
 #ifndef HAP_SERVER_HKSERVICE_H
 #define HAP_SERVER_HKSERVICE_H
 
+#define HKSERVICE_CLASS_ID 0
+
 #include <Arduino.h>
 #include "JSON/JSON.h"
 #include "HKDefinitions.h"
@@ -26,9 +28,13 @@ class HKClient;
 class HKService {
 public:
     explicit HKService(HKServiceType type, bool hidden=false, bool primary=false, String name="");
+    virtual ~HKService() = default;
+    virtual uint getClassId() { return HKSERVICE_CLASS_ID; };
+    
     void addLinkedService(HKService *service);
     void addCharacteristic(HKCharacteristic *characteristic);
     void setName(String name);
+    String getName();
 
     HKServiceType getServiceType() const;
     HKAccessory *getAccessory();

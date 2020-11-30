@@ -41,6 +41,19 @@ void HKService::setName(String name) {
 }
 
 /**
+ * @brief Get name characteristic of service
+ * 
+ * @return String name of name characteristic
+ */
+String HKService::getName() {
+    HKCharacteristic *nameChar = getCharacteristic(HKCharacteristicName);
+    if (nameChar == nullptr) {
+        return "";
+    }
+    return String(nameChar->getValue().stringValue);
+}
+
+/**
  * @brief Add characteristic to service
  * 
  * @param characteristic 

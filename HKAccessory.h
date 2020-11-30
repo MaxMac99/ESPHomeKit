@@ -12,6 +12,8 @@
 #ifndef HAP_SERVER_HKACCESSORY_H
 #define HAP_SERVER_HKACCESSORY_H
 
+#define HKACCESSORY_CLASS_ID 0
+
 #include <Arduino.h>
 #include "JSON/JSON.h"
 #include "HKClient.h"
@@ -35,6 +37,8 @@ class HKAccessory {
 public:
     explicit HKAccessory(HKAccessoryCategory category=HKAccessoryOther);
     explicit HKAccessory(const String &accessoryName, const String &modelName, const String &firmwareRevision, HKAccessoryCategory category=HKAccessoryOther);
+    virtual ~HKAccessory() = default;
+    virtual uint getClassId() { return HKACCESSORY_CLASS_ID; };
 
     virtual void identify() {};
     virtual void run() = 0;
