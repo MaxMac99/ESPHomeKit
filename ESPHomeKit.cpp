@@ -82,8 +82,10 @@ String ESPHomeKit::getName() {
     }
 
     String name = serviceName->getValue().stringValue;
+    #ifndef HK_UNIQUE_NAME
     String accessoryId = HKStorage::getAccessoryId();
     name += "-" + accessoryId.substring(0, 2) + accessoryId.substring(3, 5);
+    #endif
     return name;
 }
 
