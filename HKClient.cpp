@@ -826,7 +826,7 @@ void HKClient::onGetAccessories() {
                                          "Content-Type: application/hap+json\r\n"
                                          "Transfer-Encoding: chunked\r\n"
                                          "Connection: keep-alive\r\n\r\n");
-    send((byte *) json_200_response_headers.c_str(), json_200_response_headers.length() - 1);
+    send((byte *) json_200_response_headers.c_str(), json_200_response_headers.length());
 
     JSON json = JSON(1024, std::bind(&HKClient::sendChunk, this, std::placeholders::_1, std::placeholders::_2));
     json.startObject();
