@@ -411,3 +411,17 @@ void crypto_encryptAndSeal(const uint8_t* key, uint8_t* nonce, uint8_t* plain, u
 
     memcpy(output_buf, message, length);
 }
+
+void hkdf(uint8_t *target, uint8_t *ikm, uint8_t ikmLength, uint8_t *salt, uint8_t saltLength, uint8_t *info, uint8_t infoLength) {
+    uint8_t prk[64];
+    SHA512 sha = SHA512();
+    sha.resetHMAC(salt, saltLength);
+    sha.update(ikm, ikmLength);
+    sha.finalizeHMAC(salt, saltLength, prk, 64);
+
+    sha.reset();
+    sha.clear();
+    sha.resetHMAC(prk, 64);
+    sha.update(info, infoLength);
+    sha.finalizeHMAC(prk, 64, target, 32);
+}

@@ -4,13 +4,13 @@
 
 #include "HKTLV.h"
 
-HKTLV::HKTLV(byte type, byte *value, size_t size) : type(type), size(size) {
-    this->value = (byte *) malloc(size);
+HKTLV::HKTLV(uint8_t type, uint8_t *value, size_t size) : type(type), size(size) {
+    this->value = (uint8_t *) malloc(size);
     memcpy(this->value, value, size);
 }
 
-HKTLV::HKTLV(byte type, uint8_t pValue, size_t size) : type(type), size(size) {
-    byte *data = (byte *) malloc(size);
+HKTLV::HKTLV(uint8_t type, uint8_t pValue, size_t size) : type(type), size(size) {
+    uint8_t *data = (uint8_t *) malloc(size);
     for (size_t i = 0; i < size; i++) {
         data[i] = pValue & 0xff;
         pValue >>= 8;
@@ -23,7 +23,7 @@ HKTLV::~HKTLV() {
     free(value);
 }
 
-byte HKTLV::getType() const {
+uint8_t HKTLV::getType() const {
     return type;
 }
 
@@ -31,98 +31,62 @@ size_t HKTLV::getSize() const {
     return size;
 }
 
-byte *HKTLV::getValue() {
+uint8_t *HKTLV::getValue() {
     return value;
 }
 
-std::vector<byte> HKTLV::formatTLV(const std::vector<HKTLV *> &values) {
-    std::vector<byte> buffer;
+size_t HKTLV::getFormattedTLVSize(const std::vector<HKTLV *> &values) {
+    size_t messageSize = 0;
+    for (HKTLV *tlv : values) {
+        messageSize += 2;
+        if (tlv->getSize() > 0) {
+            messageSize += ((size_t) (tlv->getSize()-1)/255) * 2 + tlv->getSize();
+        }
+    }
+    return messageSize;
+}
+
+void HKTLV::formatTLV(const std::vector<HKTLV *> &values, uint8_t *message) {
+    size_t messagePos = 0;
     for (auto tlv : values) {
-        if (!tlv->getSize()) {
-            buffer.push_back(tlv->getType());
-            buffer.push_back(0);
-            continue;
-        }
-
-        int j = 0;
-        int remainingSize = tlv->getSize();
-        while (remainingSize) {
-            buffer.push_back(tlv->getType());
-            size_t chunkSize = (remainingSize > 255) ? 255 : remainingSize;
-            buffer.push_back(chunkSize);
-            for (size_t i = 0; i < chunkSize; i++, j++) {
-                buffer.push_back(tlv->getValue()[j]);
-            }
-            remainingSize -= chunkSize;
-        }
-    }
-    return buffer;
-}
-
-std::vector<HKTLV *> HKTLV::parseTLV(const std::vector<byte> &body) {
-    std::vector<HKTLV *> message;
-
-    size_t i = 0;
-    while (i < body.size()) {
-        byte type = body[i];
-        size_t size = 0;
-        std::vector<byte> data;
-
-        size_t j = i;
-        while (j < body.size() && body[j] == type && (byte)body[j+1] == 255) {
-            size_t chunkSize = body[j+1];
-            size += chunkSize;
-            j += chunkSize + 2;
-        }
-        if (j < body.size() && body[j] == type) {
-            size_t chunkSize = body[j+1];
-            size += chunkSize;
-        }
-
-        if (size != 0) {
-            size_t remaining = size;
-            while (remaining) {
-                size_t chunkSize = body[i+1];
-                for (size_t k = 0; k < chunkSize; k++) {
-                    data.push_back(body[i+2+k]);
-                }
-                i += chunkSize + 2;
-                remaining -= chunkSize;
+        if (tlv->getSize() == 0) {
+            message[messagePos++] = tlv->getType();
+            message[messagePos++] = 0;
+        } else {
+            size_t remainingSize = tlv->getSize();
+            while (remainingSize > 0) {
+                message[messagePos++] = tlv->getType();
+                size_t chunkSize = (remainingSize > 255) ? 255 : remainingSize;
+                message[messagePos++] = chunkSize;
+                memcpy(message + messagePos, tlv->getValue() + (tlv->getSize() - remainingSize), chunkSize);
+                messagePos += chunkSize;
+                remainingSize -= chunkSize;
             }
         }
-
-        message.push_back(new HKTLV(type, data.data(), data.size()));
     }
-    return message;
 }
 
-std::vector<HKTLV *> HKTLV::parseTLV(const byte *body, size_t size) {
+std::vector<HKTLV *> HKTLV::parseTLV(const uint8_t *body, const size_t &size) {
     std::vector<HKTLV *> message;
     for (size_t i = 0; i < size;) {
-        byte type = body[i];
+        uint8_t type = body[i];
         size_t tlvSize = 0;
-        std::vector<byte> data;
 
-        size_t j = i;
-        for (; j < size && body[j] == type && (byte)body[j+1] == 255; j += body[j+1] + 2) {
-            tlvSize += body[j+1];
-        }
-        if (j < size && body[j] == type) {
-            tlvSize += body[j+1];
+        size_t j = i+1;
+        for (; j < size && body[j-1] == type; j += body[j] + 2) {
+            tlvSize += body[j];
         }
 
-        if (size != 0) {
-            while (tlvSize) {
-                size_t chunkSize = body[i+1];
-                for (size_t k = 0; k < chunkSize; k++) {
-                    data.push_back(body[i+2+k]);
-                }
-                i+= chunkSize + 2;
-                tlvSize -= chunkSize;
-            }
+        uint8_t data[tlvSize];
+        size_t currentPos = 0;
+        while (i < size && currentPos < tlvSize && body[i] == type) {
+            uint8_t chunkSize = body[++i];
+            memcpy(data + currentPos, body + ++i, chunkSize);
+            i += chunkSize;
+            currentPos += chunkSize;
         }
 
-        message.push_back(new HKTLV(type, data.data(), data.size()));
+        message.push_back(new HKTLV(type, data, tlvSize));
     }
     return message;
 }

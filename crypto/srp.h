@@ -16,6 +16,7 @@
 
 #include <mbedtls/bignum.h>
 #include <mbedtls/sha512.h>
+#include <SHA512.h>
 #include "tweetnacl.h"
 
 
@@ -52,6 +53,7 @@ extern uint8_t crypto_verifyAndDecryptAAD(const uint8_t* key, uint8_t* nonce, ui
 extern uint8_t crypto_verifyAndDecrypt(const uint8_t* key, uint8_t* nonce, uint8_t* encrypted, uint8_t length, uint8_t* output_buf, uint8_t* mac);
 extern void crypto_encryptAndSealAAD(const uint8_t* key, uint8_t* nonce, uint8_t *aad, uint8_t aadLength, uint8_t* plain, uint16_t length, uint8_t* output_buf, uint8_t* output_mac);
 extern void crypto_encryptAndSeal(const uint8_t* key, uint8_t* nonce, uint8_t* plain, uint16_t length, uint8_t* output_buf, uint8_t* output_mac);
+extern void hkdf(uint8_t *target, uint8_t *ikm, uint8_t ikmLength, uint8_t *salt, uint8_t saltLength, uint8_t *info, uint8_t infoLength);
 
 #endif //HAP_SERVER_SRP_H
 

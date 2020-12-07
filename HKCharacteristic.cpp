@@ -13,7 +13,7 @@
 
 
 HKCharacteristic::HKCharacteristic(HKCharacteristicType type, const HKValue &value, uint8_t permissions,
-                                   String description, HKFormat format, HKUnit unit, float *minValue, float *maxValue, float *minStep, uint *maxLen, uint *maxDataLen, HKValidValues validValues, HKValidValuesRanges validValuesRanges) : id(0), service(nullptr), type(type), value(value), permissions(permissions), description(std::move(description)), unit(unit), format(format), minValue(minValue), maxValue(maxValue), minStep(minStep), maxLen(maxLen), maxDataLen(maxDataLen), validValues(validValues), validValuesRanges(validValuesRanges), getter(nullptr), setter(nullptr), callback(nullptr) {
+                                   String description, HKFormat format, HKUnit unit, float *minValue, float *maxValue, float *minStep, uint *maxLen, uint *maxDataLen, HKValidValues validValues, HKValidValuesRanges validValuesRanges) : id(0), service(nullptr), type(type), value(value), permissions(permissions), description(std::move(description)), unit(unit), format(format), minValue(minValue), maxValue(maxValue), minStep(minStep), maxLen(maxLen), maxDataLen(maxDataLen), validValues(validValues), validValuesRanges(validValuesRanges), getter(nullptr), setter(nullptr) {
 
 }
 
@@ -44,6 +44,10 @@ const HKValue &HKCharacteristic::getValue() const {
     return value;
 }
 
+HKService *HKCharacteristic::getService() {
+    return service;
+}
+
 uint HKCharacteristic::getId() const {
     return id;
 }
@@ -62,28 +66,28 @@ void HKCharacteristic::serializeToJSON(JSON &json, HKValue *jsonValue, uint json
     if (jsonFormatOptions & HKCharacteristicFormatPerms) {
         json.setString("perms");
         json.startArray();
-        if (permissions & PermissionPairedRead) {
+        if (permissions & HKPermissionPairedRead) {
             json.setString("pr");
         }
-        if (permissions & PermissionPairedWrite) {
+        if (permissions & HKPermissionPairedWrite) {
             json.setString("pw");
         }
-        if (permissions & PermissionNotify) {
+        if (permissions & HKPermissionNotify) {
             json.setString("ev");
         }
-        if (permissions & PermissionAdditionalAuthorization) {
+        if (permissions & HKPermissionAdditionalAuthorization) {
             json.setString("aa");
         }
-        if (permissions & PermissionTimedWrite) {
+        if (permissions & HKPermissionTimedWrite) {
             json.setString("tw");
         }
-        if (permissions & PermissionHidden) {
+        if (permissions & HKPermissionHidden) {
             json.setString("hd");
         }
         json.endArray();
     }
 
-    if (client && (jsonFormatOptions & HKCharacteristicFormatEvents) && (permissions & PermissionNotify)) {
+    if (client && (jsonFormatOptions & HKCharacteristicFormatEvents) && (permissions & HKPermissionNotify)) {
         json.setString("ev");
         json.setBool(hasCallbackEvent(client));
     }
@@ -94,58 +98,58 @@ void HKCharacteristic::serializeToJSON(JSON &json, HKValue *jsonValue, uint json
 
         json.setString("format");
         switch (format) {
-            case FormatBool:
+            case HKFormatBool:
                 json.setString("bool");
                 break;
-            case FormatUInt8:
+            case HKFormatUInt8:
                 json.setString("uint8");
                 break;
-            case FormatUInt16:
+            case HKFormatUInt16:
                 json.setString("uint16");
                 break;
-            case FormatUInt32:
+            case HKFormatUInt32:
                 json.setString("uint32");
                 break;
-            case FormatUInt64:
+            case HKFormatUInt64:
                 json.setString("uint64");
                 break;
-            case FormatInt:
+            case HKFormatInt:
                 json.setString("int");
                 break;
-            case FormatFloat:
+            case HKFormatFloat:
                 json.setString("float");
                 break;
-            case FormatString:
+            case HKFormatString:
                 json.setString("string");
                 break;
-            case FormatTLV:
+            case HKFormatTLV:
                 json.setString("tlv8");
                 break;
-            case FormatData:
+            case HKFormatData:
                 json.setString("data");
                 break;
         }
 
         switch (unit) {
-            case UnitNone:
+            case HKUnitNone:
                 break;
-            case Celsius:
+            case HKUnitCelsius:
                 json.setString("unit");
                 json.setString("celsius");
                 break;
-            case UnitPercentage:
+            case HKUnitPercentage:
                 json.setString("unit");
                 json.setString("percentage");
                 break;
-            case UnitArcdegrees:
+            case HKUnitArcdegrees:
                 json.setString("unit");
                 json.setString("arcdegrees");
                 break;
-            case UnitLux:
+            case HKUnitLux:
                 json.setString("unit");
                 json.setString("lux");
                 break;
-            case UnitSeconds:
+            case HKUnitSeconds:
                 json.setString("unit");
                 json.setString("seconds");
                 break;
@@ -202,7 +206,7 @@ void HKCharacteristic::serializeToJSON(JSON &json, HKValue *jsonValue, uint json
         }
     }
 
-    if (permissions & PermissionPairedRead) {
+    if (permissions & HKPermissionPairedRead) {
         HKValue v = jsonValue ? *jsonValue : getter ? getter() : value;
 
         if (v.isNull) {
@@ -212,29 +216,29 @@ void HKCharacteristic::serializeToJSON(JSON &json, HKValue *jsonValue, uint json
             HKLOGERROR("[HKCharacteristic::serializeToJSON] Value format is different from format (id=%d.%d: %d != %d, service=%s, type=%d)\r\n", service->getAccessory()->getId(), id, v.format, format, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
         } else {
             switch (v.format) {
-                case FormatBool:
+                case HKFormatBool:
                     json.setString("value");
                     json.setBool(v.boolValue);
                     break;
-                case FormatUInt8:
-                case FormatUInt16:
-                case FormatUInt32:
-                case FormatUInt64:
-                case FormatInt:
+                case HKFormatUInt8:
+                case HKFormatUInt16:
+                case HKFormatUInt32:
+                case HKFormatUInt64:
+                case HKFormatInt:
                     json.setString("value");
                     json.setInt(v.intValue);
                     break;
-                case FormatFloat:
+                case HKFormatFloat:
                     json.setString("value");
                     json.setFloat(v.floatValue);
                     break;
-                case FormatString:
+                case HKFormatString:
                     json.setString("value");
                     json.setString(v.stringValue);
                     break;
-                case FormatTLV:
+                case HKFormatTLV:
                     break;
-                case FormatData:
+                case HKFormatData:
                     break;
                 default:
                     break;
@@ -244,14 +248,14 @@ void HKCharacteristic::serializeToJSON(JSON &json, HKValue *jsonValue, uint json
 }
 
 HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
-    if (!(permissions & PermissionPairedWrite)) {
+    if (!(permissions & HKPermissionPairedWrite)) {
         HKLOGERROR("[HKCharacteristic::setValue] Failed to set characteristic value (id=%d.%d, service=%s, type=%d): no write permission\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
         return HAPStatusReadOnly;
     }
 
     HKValue hkValue = HKValue();
     switch (format) {
-        case FormatBool: {
+        case HKFormatBool: {
             bool result;
             String compare = jsonValue;
             compare.toLowerCase();
@@ -267,7 +271,7 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
             HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d, service=%s, type=%d) with bool: %d\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type, result);
 
             if (setter) {
-                hkValue = HKValue(FormatBool, result);
+                hkValue = HKValue(HKFormatBool, result);
                 setter(hkValue);
             } else {
                 hkValue = value;
@@ -275,37 +279,37 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
             }
             break;
         }
-        case FormatUInt8:
-        case FormatUInt16:
-        case FormatUInt32:
-        case FormatUInt64:
-        case FormatInt: {
+        case HKFormatUInt8:
+        case HKFormatUInt16:
+        case HKFormatUInt32:
+        case HKFormatUInt64:
+        case HKFormatInt: {
             uint64_t result = jsonValue.toInt();
 
             uint64_t checkMinValue = 0;
             uint64_t checkMaxValue = 0;
             switch (format) {
-                case FormatUInt8: {
+                case HKFormatUInt8: {
                     checkMinValue = 0;
                     checkMaxValue = 0xFF;
                     break;
                 }
-                case FormatUInt16:{
+                case HKFormatUInt16:{
                     checkMinValue = 0;
                     checkMaxValue = 0xFFFF;
                     break;
                 }
-                case FormatUInt32: {
+                case HKFormatUInt32: {
                     checkMinValue = 0;
                     checkMaxValue = 0xFFFFFFFF;
                     break;
                 }
-                case FormatUInt64: {
+                case HKFormatUInt64: {
                     checkMinValue = 0;
                     checkMaxValue = 0xFFFFFFFFFFFFFFFF;
                     break;
                 }
-                case FormatInt: {
+                case HKFormatInt: {
                     checkMinValue = -2147483648;
                     checkMaxValue = 2147483647;
                     break;
@@ -366,7 +370,7 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
             }
             break;
         }
-        case FormatFloat: {
+        case HKFormatFloat: {
             float result = jsonValue.toFloat();
 
             if ((minValue && result < *minValue) || (maxValue && result > *maxValue)) {
@@ -377,7 +381,7 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
             HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d, service=%s, type=%d) with float: %f\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type, result);
 
             if (setter) {
-                hkValue = HKValue(FormatFloat, result);
+                hkValue = HKValue(HKFormatFloat, result);
                 setter(hkValue);
             } else {
                 hkValue = value;
@@ -385,7 +389,7 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
             }
             break;
         }
-        case FormatString: {
+        case HKFormatString: {
             const char *result = jsonValue.c_str();
 
             uint checkMaxLen = maxLen ? *maxLen : 64;
@@ -397,7 +401,7 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
             HKLOGINFO("[HKCharacteristic::setValue] Update Characteristic (id=%d.%d, service=%s, type=%d) with string: %s\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type, result);
 
             if (setter) {
-                hkValue = HKValue(FormatString, result);
+                hkValue = HKValue(HKFormatString, result);
                 setter(hkValue);
             } else {
                 hkValue = value;
@@ -405,11 +409,11 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
             }
             break;
         }
-        case FormatTLV: {
+        case HKFormatTLV: {
             HKLOGERROR("[HKCharacteristic::setValue] (id=%d.%d, service=%s, type=%d) TLV not supported yet\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
             break;
         }
-        case FormatData: {
+        case HKFormatData: {
             HKLOGERROR("[HKCharacteristic::setValue] (id=%d.%d, service=%s, type=%d) Data not supported yet\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
             break;
         }
@@ -437,7 +441,7 @@ HAPStatus HKCharacteristic::setEvent(HKClient *client, const String& jsonValue) 
         return HAPStatusInvalidValue;
     }
 
-    if (!(permissions & PermissionNotify)) {
+    if (!(permissions & HKPermissionNotify)) {
         HKLOGERROR("[HKCharacteristic::setEvent] Failed to update (id=%d.%d, service=%s, type=%d): notifications are not supported\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
         return HAPStatusNotificationsUnsupported;
     }
@@ -453,73 +457,26 @@ HAPStatus HKCharacteristic::setEvent(HKClient *client, const String& jsonValue) 
 }
 
 void HKCharacteristic::notify(const HKValue& newValue) {
-    ChangeCallback *temp = callback;
-    while (temp) {
-        temp->function(temp->client, this, newValue);
-        temp = temp->next;
+    for (HKClient *client : notifiers) {
+        client->scheduleEvent(this, newValue);
     }
 }
 
 bool HKCharacteristic::hasCallbackEvent(HKClient *client) {
-    ChangeCallback *temp = callback;
-    while (temp) {
-        if (temp->client == client) {
-            return true;
-        }
-        temp = temp->next;
-    }
-    return false;
+    return std::find(notifiers.begin(), notifiers.end(), client) != notifiers.end();
 }
 
 void HKCharacteristic::removeCallbackEvent(HKClient *client) {
-    while (callback) {
-        if (callback->client != client) {
-            break;
-        }
-
-        ChangeCallback *temp = callback;
-        callback = callback->next;
-        delete temp;
-    }
-
-    if (!callback) {
-        return;
-    }
-
-    ChangeCallback *temp = callback;
-    while (temp->next) {
-        if (temp->next->client == client) {
-            ChangeCallback *next = temp->next;
-            temp->next = next->next;
-            delete next;
-        } else {
-            temp = temp->next;
-        }
+    auto comp = std::find(notifiers.begin(), notifiers.end(), client);
+    if (comp != notifiers.end()) {
+        notifiers.erase(comp);
     }
 }
 
 void HKCharacteristic::addCallbackEvent(HKClient *client) {
-    auto newCallback = new ChangeCallback();
-    newCallback->client = client;
-    newCallback->function = std::bind(&HKClient::scheduleEvent, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-
-    if (callback) {
-        ChangeCallback *temp = callback;
-        if (temp->client == newCallback->client) {
-            delete newCallback;
-            return;
-        }
-
-        while (temp->next) {
-            if (temp->client == newCallback->client) {
-                delete newCallback;
-                return;
-            }
-            temp = temp->next;
-        }
-        temp->next = newCallback;
-    } else {
-        callback = newCallback;
+    auto comp = std::find(notifiers.begin(), notifiers.end(), client);
+    if (comp != notifiers.end()) {
+        notifiers.push_back(client);
     }
 }
 

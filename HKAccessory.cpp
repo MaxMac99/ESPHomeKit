@@ -37,29 +37,29 @@ void HKAccessory::addInfoService(const String& accName, const String& manufactur
     auto *infoService = new HKService(HKServiceType::HKServiceAccessoryInfo);
     addService(infoService);
 
-    HKValue identifyValue = HKValue(FormatBool);
-    HKCharacteristic *identifyChar = new HKCharacteristic(HKCharacteristicIdentify, identifyValue, PermissionPairedWrite, "Identify", FormatBool);
+    HKValue identifyValue = HKValue(HKFormatBool);
+    HKCharacteristic *identifyChar = new HKCharacteristic(HKCharacteristicIdentify, identifyValue, HKPermissionPairedWrite, "Identify", HKFormatBool);
     identifyChar->setSetter(std::bind(&HKAccessory::identify, this));
     infoService->addCharacteristic(identifyChar);
 
-    HKValue manufacturerValue = HKValue(FormatString, "MaxMac Co.");
-    HKCharacteristic *manufacturerChar = new HKCharacteristic(HKCharacteristicManufactuer, manufacturerValue, PermissionPairedRead, "Manufacturer", FormatString);
+    HKValue manufacturerValue = HKValue(HKFormatString, "MaxMac Co.");
+    HKCharacteristic *manufacturerChar = new HKCharacteristic(HKCharacteristicManufactuer, manufacturerValue, HKPermissionPairedRead, "Manufacturer", HKFormatString);
     infoService->addCharacteristic(manufacturerChar);
 
-    HKValue modelValue = HKValue(FormatString, modelName);
-    HKCharacteristic *modelChar = new HKCharacteristic(HKCharacteristicModelName, modelValue, PermissionPairedRead, "Model", FormatString);
+    HKValue modelValue = HKValue(HKFormatString, modelName);
+    HKCharacteristic *modelChar = new HKCharacteristic(HKCharacteristicModelName, modelValue, HKPermissionPairedRead, "Model", HKFormatString);
     infoService->addCharacteristic(modelChar);
 
-    HKValue nameValue = HKValue(FormatString, accName);
-    HKCharacteristic *nameChar = new HKCharacteristic(HKCharacteristicName, nameValue, PermissionPairedRead, "Name", FormatString);
+    HKValue nameValue = HKValue(HKFormatString, accName);
+    HKCharacteristic *nameChar = new HKCharacteristic(HKCharacteristicName, nameValue, HKPermissionPairedRead, "Name", HKFormatString);
     infoService->addCharacteristic(nameChar);
 
-    HKValue serialValue = HKValue(FormatString, String(ESP.getChipId()));
-    HKCharacteristic *serialChar = new HKCharacteristic(HKCharacteristicSerialNumber, serialValue, PermissionPairedRead, "Serial Number", FormatString);
+    HKValue serialValue = HKValue(HKFormatString, String(ESP.getChipId()));
+    HKCharacteristic *serialChar = new HKCharacteristic(HKCharacteristicSerialNumber, serialValue, HKPermissionPairedRead, "Serial Number", HKFormatString);
     infoService->addCharacteristic(serialChar);
 
-    HKValue firmwareValue = HKValue(FormatString, firmwareRevision);
-    HKCharacteristic *firmwareChar = new HKCharacteristic(HKCharacteristicFirmwareRevision, firmwareValue, PermissionPairedRead, "Firmware Revision", FormatString);
+    HKValue firmwareValue = HKValue(HKFormatString, firmwareRevision);
+    HKCharacteristic *firmwareChar = new HKCharacteristic(HKCharacteristicFirmwareRevision, firmwareValue, HKPermissionPairedRead, "Firmware Revision", HKFormatString);
     infoService->addCharacteristic(firmwareChar);
 }
 

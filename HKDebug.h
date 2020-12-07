@@ -6,27 +6,27 @@
 #endif
 
 #if HKLOGLEVEL == 0
-#define HKLOGDEBUG(str, ...) Serial.printf("[HomeKit] [DEBUG] " str, ## __VA_ARGS__)
-#define HKLOGDEBUGSINGLE(...) Serial.printf(__VA_ARGS__)
+#define HKLOGDEBUG(str, ...) Serial.printf_P(PSTR("[HomeKit] [DEBUG] " str), ## __VA_ARGS__)
+#define HKLOGDEBUGSINGLE(str, ...) Serial.printf_P(PSTR(str), ## __VA_ARGS__)
 #else
 #define HKLOGDEBUG(...)
 #define HKLOGDEBUGSINGLE(...)
 #endif
 
 #if HKLOGLEVEL <= 1
-#define HKLOGINFO(str, ...) Serial.printf("[HomeKit] [INFO ] " str, ## __VA_ARGS__)
+#define HKLOGINFO(str, ...) Serial.printf_P(PSTR("[HomeKit] [INFO ] " str), ## __VA_ARGS__)
 #else
 #define HKLOGINFO(...)
 #endif
 
 #if HKLOGLEVEL <= 2
-#define HKLOGWARNING(str, ...) Serial.printf("[HomeKit] [WARN ] " str, ## __VA_ARGS__)
+#define HKLOGWARNING(str, ...) Serial.printf_P(PSTR("[HomeKit] [WARN ] " str), ## __VA_ARGS__)
 #else
 #define HKLOGWARNING(...)
 #endif
 
 #if HKLOGLEVEL <= 3
-#define HKLOGERROR(str, ...) Serial.printf("[HomeKit] [ERROR] " str, ## __VA_ARGS__)
+#define HKLOGERROR(str, ...) Serial.printf_P(PSTR("[HomeKit] [ERROR] " str), ## __VA_ARGS__)
 #else
 #define HKLOGERROR(...)
 #endif

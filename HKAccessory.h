@@ -20,13 +20,11 @@
 #include "HKDefinitions.h"
 #include "HKService.h"
 #include "HKCharacteristic.h"
-#include "HKServer.h"
 #include "ESPHomeKit.h"
 
 class HKService;
 class HKCharacteristic;
 class HKClient;
-class HKServer;
 class ESPHomeKit;
 
 /**
@@ -57,7 +55,6 @@ private:
     void clearCallbackEvents(HKClient *client);
     void serializeToJSON(JSON &json, HKValue *value, HKClient *client = nullptr);
     
-    friend HKServer;
     friend HKClient;
     friend ESPHomeKit;
 private:
