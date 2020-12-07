@@ -59,9 +59,6 @@ public:
     void reset();
     void resetPairings();
 
-    void saveSSID(const String& ssid, const String& wiFiPassword="");
-    String getSSID();
-    String getWiFiPassword();
     String getName();
     HKAccessory *getAccessory();
 
