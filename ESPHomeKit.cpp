@@ -28,7 +28,7 @@ ESPHomeKit::~ESPHomeKit() {
 }
 
 /**
- * @brief Call it in the setup routine after you have set your accessory. Sets up the accessory and the server.
+ * @brief Setup your accessory for HomeKit
  * 
  */
 void ESPHomeKit::setup(HKAccessory *accessory) {
@@ -85,7 +85,7 @@ bool ESPHomeKit::isPairing() {
 }
 
 /**
- * @brief Get saved name, name from info service or generate name
+ * @brief Get name from info service
  * 
  * @return String name
  */
@@ -138,6 +138,12 @@ void ESPHomeKit::resetPairings() {
     HKStorage::resetPairings();
 }
 
+/**
+ * @brief Prepare mDNS Service
+ * 
+ * @return true Successfully started Service
+ * @return false Service failed
+ */
 bool ESPHomeKit::setupMDNS() {
     HKLOGINFO("[ESPHomeKit::setupMDNS] Setup mDNS\r\n");
     String uniqueName = getName();
@@ -233,7 +239,7 @@ bool ESPHomeKit::setupMDNS() {
 }
 
 /**
- * @brief look for new clients and handle received messages
+ * @brief Look for new clients and handle received messages
  * 
  */
 void ESPHomeKit::handleClient() {
@@ -269,7 +275,7 @@ void ESPHomeKit::handleClient() {
 }
 
 /**
- * @brief parse given message and execute HomeKit endpoints
+ * @brief Parse given message and execute HomeKit endpoints
  * 
  * @param client active client who sent message
  * @param message the sent message in bytes

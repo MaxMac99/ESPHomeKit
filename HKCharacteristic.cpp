@@ -11,12 +11,33 @@
 
 #include "HKCharacteristic.h"
 
-
+/**
+ * @brief Construct a new HKCharacteristic::HKCharacteristic object
+ * Look up infos for Characteristic in Apples HAP manual and look at HKDefinitions.h
+ * 
+ * @param type Type of characteristic
+ * @param value Initial Value
+ * @param permissions Permission needed to access values
+ * @param description Description of the service
+ * @param format Format of values
+ * @param unit Unit for values
+ * @param minValue Minimum value (only for float and int)
+ * @param maxValue Maximum value (only for float and int)
+ * @param minStep Minimum step size (only for float and int)
+ * @param maxLen Maximum length
+ * @param maxDataLen Maximum data length
+ * @param validValues Valid values
+ * @param validValuesRanges Valid values as range
+ */
 HKCharacteristic::HKCharacteristic(HKCharacteristicType type, const HKValue &value, uint8_t permissions,
                                    String description, HKFormat format, HKUnit unit, float *minValue, float *maxValue, float *minStep, uint *maxLen, uint *maxDataLen, HKValidValues validValues, HKValidValuesRanges validValuesRanges) : id(0), service(nullptr), type(type), value(value), permissions(permissions), description(std::move(description)), unit(unit), format(format), minValue(minValue), maxValue(maxValue), minStep(minStep), maxLen(maxLen), maxDataLen(maxDataLen), validValues(validValues), validValuesRanges(validValuesRanges), getter(nullptr), setter(nullptr) {
 
 }
 
+/**
+ * @brief Destroy the HKCharacteristic::HKCharacteristic object
+ * 
+ */
 HKCharacteristic::~HKCharacteristic() {
     delete minValue;
     delete maxValue;
@@ -25,18 +46,38 @@ HKCharacteristic::~HKCharacteristic() {
     delete maxDataLen;
 }
 
+/**
+ * @brief Set function to call when it needs current value
+ * 
+ * @param getter Function
+ */
 void HKCharacteristic::setGetter(const std::function<const HKValue &()> &getter) {
     HKCharacteristic::getter = getter;
 }
 
+/**
+ * @brief Set function to call when value was updated
+ * 
+ * @param setter Function
+ */
 void HKCharacteristic::setSetter(const std::function<void(const HKValue)> &setter) {
     HKCharacteristic::setter = setter;
 }
 
+/**
+ * @brief Get assigned type of characteristic
+ * 
+ * @return HKCharacteristicType Type of the characteristic
+ */
 HKCharacteristicType HKCharacteristic::getType() const {
     return type;
 }
 
+/**
+ * @brief Get current value of the characteristic
+ * 
+ * @return const HKValue& Current value
+ */
 const HKValue &HKCharacteristic::getValue() const {
     if (getter) {
         return getter();
@@ -44,14 +85,32 @@ const HKValue &HKCharacteristic::getValue() const {
     return value;
 }
 
+/**
+ * @brief Get parent service
+ * 
+ * @return HKService* Parent Service
+ */
 HKService *HKCharacteristic::getService() {
     return service;
 }
 
+/**
+ * @brief Get id
+ * 
+ * @return uint Id
+ */
 uint HKCharacteristic::getId() const {
     return id;
 }
 
+/**
+ * @brief Convert to JSON String
+ * 
+ * @param json Target JSON object
+ * @param jsonValue Optional value to set value in json
+ * @param jsonFormatOptions Options to select which parameters to print
+ * @param client Client requesting characteristic
+ */
 void HKCharacteristic::serializeToJSON(JSON &json, HKValue *jsonValue, uint jsonFormatOptions, HKClient *client) {
     json.setString("iid");
     json.setInt(id);
@@ -247,6 +306,12 @@ void HKCharacteristic::serializeToJSON(JSON &json, HKValue *jsonValue, uint json
     }
 }
 
+/**
+ * @brief Set current value from JSON input
+ * 
+ * @param jsonValue input as JSON String
+ * @return HAPStatus Was setting the value successful
+ */
 HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
     if (!(permissions & HKPermissionPairedWrite)) {
         HKLOGERROR("[HKCharacteristic::setValue] Failed to set characteristic value (id=%d.%d, service=%s, type=%d): no write permission\r\n", service->getAccessory()->getId(), id, service->getCharacteristic(HKCharacteristicName)->getValue().stringValue, type);
@@ -428,6 +493,13 @@ HAPStatus HKCharacteristic::setValue(const String& jsonValue) {
     return HAPStatusSuccess;
 }
 
+/**
+ * @brief Register client for updates of characteristic (with notify)
+ * 
+ * @param client Client to register
+ * @param jsonValue register or deregister as JSON String
+ * @return HAPStatus Successfully set value
+ */
 HAPStatus HKCharacteristic::setEvent(HKClient *client, const String& jsonValue) {
     bool events;
     String compare = jsonValue;
@@ -456,16 +528,33 @@ HAPStatus HKCharacteristic::setEvent(HKClient *client, const String& jsonValue) 
     return HAPStatusSuccess;
 }
 
+/**
+ * @brief Notify connected clients about a change of value
+ * 
+ * @param newValue New value
+ */
 void HKCharacteristic::notify(const HKValue& newValue) {
     for (HKClient *client : notifiers) {
         client->scheduleEvent(this, newValue);
     }
 }
 
+/**
+ * @brief Is client registered for update notifications
+ * 
+ * @param client Registered client
+ * @return true Client was registered
+ * @return false Client was not registered
+ */
 bool HKCharacteristic::hasCallbackEvent(HKClient *client) {
     return std::find(notifiers.begin(), notifiers.end(), client) != notifiers.end();
 }
 
+/**
+ * @brief Remove client for update notifications
+ * 
+ * @param client Client to remove
+ */
 void HKCharacteristic::removeCallbackEvent(HKClient *client) {
     auto comp = std::find(notifiers.begin(), notifiers.end(), client);
     if (comp != notifiers.end()) {
@@ -473,6 +562,11 @@ void HKCharacteristic::removeCallbackEvent(HKClient *client) {
     }
 }
 
+/**
+ * @brief Add client for update notifications
+ * 
+ * @param client Client to add
+ */
 void HKCharacteristic::addCallbackEvent(HKClient *client) {
     auto comp = std::find(notifiers.begin(), notifiers.end(), client);
     if (comp != notifiers.end()) {
