@@ -14,19 +14,32 @@ size_t HKClient::available() {
     return client.available();
 }
 
+size_t HKClient::getMessageSize(const size_t &dataSize) {
+    if (!encrypted) {
+        return dataSize;
+    }
+    const size_t blockSize = 1024 + 16 + 2;
+    return dataSize / blockSize * 1024 + dataSize % blockSize - 16 - 2;
+}
+
 void HKClient::receive(uint8_t *message, const size_t &dataSize) {
     if (!dataSize) {
         return;
     }
-    client.readBytes(message, dataSize);
 
     if (encrypted) {
-        size_t decryptedSize = 1;
-        decrypt(nullptr, decryptedSize, nullptr, dataSize);
-        uint8_t decryptedMessage[decryptedSize];
-        if (!decrypt(decryptedMessage, decryptedSize, message, dataSize)) {
+        size_t size = client.available();
+        uint8_t *encryptedMessage = (uint8_t *) malloc(size);
+        client.readBytes(encryptedMessage, size);
+
+        if (!decrypt(message, dataSize, encryptedMessage, size)) {
+            HKLOGWARNING("[HKClient::receive] decryption failed\r\n");
+            free(encryptedMessage);
             return;
         }
+        free(encryptedMessage);
+    } else {
+        client.readBytes(message, dataSize);
     }
 }
 
@@ -35,7 +48,7 @@ bool HKClient::readBytesWithTimeout(uint8_t *data, const size_t &maxLength, cons
     while (currentLength < maxLength) {
         uint32_t tries = timeout_ms;
         size_t avail;
-        while (!(avail = client.available()) && tries-- != 0) {
+        while (!(avail = client.available()) && tries--) {
             delay(1);
         }
         if (!avail) {
@@ -78,13 +91,13 @@ void HKClient::stop() {
     client.stop();
 }
 
+void HKClient::setEncryption(bool encryption) {
+    encrypted = encryption;
+}
+
 size_t HKClient::prepareEncryption(uint8_t *accessoryPublicKey, uint8_t *encryptedResponseData, const uint8_t *devicePublicKey) {
     if (encryptedResponseData == nullptr) {
-        std::vector<HKTLV *> dummySubResponseMessage = {
-            new HKTLV(TLVTypeIdentifier, nullptr, HKStorage::getAccessoryId().length()),
-            new HKTLV(TLVTypeSignature, nullptr, 64)
-        };
-        return HKTLV::getFormattedTLVSize(dummySubResponseMessage) + 16;
+        return 2 + HKStorage::getAccessoryId().length() + 2 + 64 + 16;
     }
     if (verifyContext == nullptr) {
         verifyContext = new VerifyContext();
@@ -100,37 +113,39 @@ size_t HKClient::prepareEncryption(uint8_t *accessoryPublicKey, uint8_t *encrypt
 
     String accessoryId = HKStorage::getAccessoryId();
     size_t accessoryInfoSize = 32 + accessoryId.length() + 32;
-    uint8_t accessoryInfo[accessoryInfoSize];
+    uint8_t *accessoryInfo = (uint8_t *) malloc(accessoryInfoSize);
     memcpy(accessoryInfo, accessoryPublicKey, 32);
     memcpy(accessoryInfo + 32, accessoryId.c_str(), accessoryId.length());
     memcpy(accessoryInfo + 32 + accessoryId.length(), devicePublicKey, 32);
 
     uint8_t accessorySignature[64];
     Ed25519::sign(accessorySignature, HKStorage::getAccessoryKey().privateKey, HKStorage::getAccessoryKey().publicKey, accessoryInfo, accessoryInfoSize);
+    free(accessoryInfo);
 
     std::vector<HKTLV *> subResponseMessage = {
             new HKTLV(TLVTypeIdentifier, (uint8_t *) accessoryId.c_str(), accessoryId.length()),
             new HKTLV(TLVTypeSignature, accessorySignature, 64)
     };
     size_t responseSize = HKTLV::getFormattedTLVSize(subResponseMessage);
-    uint8_t responseData[responseSize];
-    HKTLV::formatTLV(subResponseMessage, responseData);
     if (encryptedResponseData == nullptr) {
         return responseSize + 16;
     }
+    uint8_t *responseData = (uint8_t *) malloc(responseSize);
+    HKTLV::formatTLV(subResponseMessage, responseData);
 
     const char salt1[] = "Pair-Verify-Encrypt-Salt";
     const char info1[] = "Pair-Verify-Encrypt-Info\001";
     hkdf(verifyContext->sessionKey, verifyContext->sharedKey, 32, (uint8_t *) salt1, sizeof(salt1)-1, (uint8_t *) info1, sizeof(info1)-1);
 
     crypto_encryptAndSeal(verifyContext->sessionKey, (uint8_t *) "PV-Msg02", responseData, responseSize, encryptedResponseData, encryptedResponseData + responseSize);
+    free(responseData);
 
     return responseSize + 16;
 }
 
 bool HKClient::finishEncryption(uint8_t *encryptedData, const size_t &encryptedSize) {
     size_t decryptedDataSize = encryptedSize - 16;
-    byte decryptedData[decryptedDataSize];
+    uint8_t *decryptedData = (uint8_t *) malloc(decryptedDataSize);
     if (!crypto_verifyAndDecrypt(verifyContext->sessionKey, (byte *) "PV-Msg03", encryptedData, decryptedDataSize, decryptedData, encryptedData + decryptedDataSize)) {
         HKLOGINFO("[HKClient::onPairVerify] Could not verify message\r\n");
         delete verifyContext;
@@ -139,6 +154,7 @@ bool HKClient::finishEncryption(uint8_t *encryptedData, const size_t &encryptedS
     }
 
     std::vector<HKTLV *> decryptedMessage = HKTLV::parseTLV(decryptedData, decryptedDataSize);
+    free(decryptedData);
     HKTLV *deviceId = HKTLV::findTLV(decryptedMessage, TLVTypeIdentifier);
     if (!deviceId) {
         HKLOGINFO("[HKClient::onPairVerify] Could not find device ID\r\n");
@@ -173,13 +189,14 @@ bool HKClient::finishEncryption(uint8_t *encryptedData, const size_t &encryptedS
     }
 
     size_t deviceInfoSize = sizeof(verifyContext->devicePublicKey) + sizeof(verifyContext->accessoryPublicKey) + deviceId->getSize();
-    byte deviceInfo[deviceInfoSize];
+    uint8_t *deviceInfo = (uint8_t *) malloc(deviceInfoSize);
     memcpy(deviceInfo, verifyContext->devicePublicKey, sizeof(verifyContext->devicePublicKey));
     memcpy(deviceInfo + sizeof(verifyContext->devicePublicKey), deviceId->getValue(), deviceId->getSize());
     memcpy(deviceInfo + sizeof(verifyContext->devicePublicKey) + deviceId->getSize(), verifyContext->accessoryPublicKey, sizeof(verifyContext->accessoryPublicKey));
 
     if (!Ed25519::verify(deviceSignature->getValue(), pairingItem->deviceKey, deviceInfo, deviceInfoSize)) {
         HKLOGINFO("[HKClient::onPairVerify] Could not verify device readInfo\r\n");
+        free(deviceInfo);
         delete pairingItem;
         for (auto msg : decryptedMessage) {
             delete msg;
@@ -188,6 +205,7 @@ bool HKClient::finishEncryption(uint8_t *encryptedData, const size_t &encryptedS
         verifyContext = nullptr;
         return false;
     }
+    free(deviceInfo);
 
     const byte salt[] = "Control-Salt";
     const byte readInfo[] = "Control-Read-Encryption-Key\001";
@@ -203,9 +221,6 @@ bool HKClient::finishEncryption(uint8_t *encryptedData, const size_t &encryptedS
     for (auto msg : decryptedMessage) {
         delete msg;
     }
-    delete verifyContext;
-    verifyContext = nullptr;
-    encrypted = true;
 
     return true;
 }
@@ -240,15 +255,13 @@ void HKClient::send(uint8_t *message, const size_t &messageSize) {
     if (encrypted) {
         sendEncrypted(message, messageSize);
     } else {
-        HKLOGINFO("[HKClient::send] heap: %d length: %d\r\n", ESP.getFreeHeap(), messageSize);
         client.write(message, messageSize);
-        HKLOGINFO("[HKClient::send] heap: %d\r\n", ESP.getFreeHeap());
     }
 }
 
 void HKClient::sendChunk(uint8_t *message, size_t messageSize) {
     size_t payloadSize = messageSize + 8;
-    uint8_t payload[payloadSize];
+    uint8_t *payload = (uint8_t *) malloc(payloadSize);
 
     int offset = snprintf((char *) payload, payloadSize, "%x\r\n", messageSize);
     memcpy(payload + offset, message, messageSize);
@@ -256,6 +269,7 @@ void HKClient::sendChunk(uint8_t *message, size_t messageSize) {
     payload[offset + messageSize + 1] = '\n';
 
     send(payload, offset + messageSize + 2);
+    free(payload);
 }
 
 void HKClient::sendJSONResponse(int errorCode, const char *message, const size_t &messageSize) {
@@ -271,63 +285,35 @@ void HKClient::sendJSONResponse(int errorCode, const char *message, const size_t
         default: statusText = F("OK"); break;
     }
     size_t maxSize = sizeof(http_header_json) + messageSize + 28;
-    char header[maxSize];
+    char *header = (char *) malloc(maxSize);
     size_t currentSize = snprintf_P(header, maxSize, http_header_json, errorCode, statusText.c_str(), messageSize, message);
 
     send((uint8_t *) header, currentSize);
+    free(header);
 }
 
 void HKClient::sendJSONErrorResponse(int errorCode, HAPStatus status) {
-    char message[sizeof(json_status)+4];
+    char *message = (char *) malloc(sizeof(json_status)+4);
     size_t currentSize = snprintf_P(message, sizeof(json_status) + 4, json_status, status);
 
     sendJSONResponse(errorCode, message, currentSize);
+    free(message);
 }
 
 void HKClient::sendTLVResponse(const std::vector<HKTLV *> &message) {
-    HKLOGINFO("[HKClient::sendTLVResponse] heap: %d\r\n", ESP.getFreeHeap());
     size_t bodySize = HKTLV::getFormattedTLVSize(message);
-    HKLOGINFO("[HKClient::sendTLVResponse] heap: %d\r\n", ESP.getFreeHeap());
 
-    uint8_t body[bodySize];
-    HKLOGINFO("[HKClient::sendTLVResponse] heap: %d\r\n", ESP.getFreeHeap());
+    uint8_t *body = (uint8_t *) malloc(bodySize);
     HKTLV::formatTLV(message, body);
-    HKLOGINFO("[HKClient::sendTLVResponse] heap: %d\r\n", ESP.getFreeHeap());
-    // HKLOGDEBUGSINGLE("TLV formatted: \r\n");
-    // for (size_t i = 0; i < bodySize;) {
-    //     if (i < 0x10) {
-    //         HKLOGDEBUGSINGLE("000%x:   ", i);
-    //     } else if (i < 0x100) {
-    //         HKLOGDEBUGSINGLE("00%x:   ", i);
-    //     } else if (i < 0x1000) {
-    //         HKLOGDEBUGSINGLE("0%x:   ", i);
-    //     } else {
-    //         HKLOGDEBUGSINGLE("%x:   ", i);
-    //     }
-    //     for (size_t j = 0; j < 8 && i < bodySize; j++) {
-    //         byte item = *(body + i++);
-    //         if (item < 0x10) {
-    //             HKLOGDEBUGSINGLE("0%x ", item);
-    //         } else {
-    //             HKLOGDEBUGSINGLE("%x ", item);
-    //         }
-    //     }
-    //     HKLOGDEBUGSINGLE("\r\n");
-    // }
-    // HKLOGDEBUGSINGLE("\r\nTLV formatted end\r\n");
+    size_t headersSize = sizeof(http_header_tlv8) + 3;
 
-    size_t headersSize = sizeof(http_header_tlv8) + 3; // content-lenght max 5 characters
-    HKLOGINFO("[HKClient::sendTLVResponse] heap: %d\r\n", ESP.getFreeHeap());
-
-    char response[headersSize + bodySize];
-    HKLOGINFO("[HKClient::sendTLVResponse] alloc size: %d heap: %d\r\n", headersSize + bodySize, ESP.getFreeHeap());
+    char *response = (char *) malloc(headersSize + bodySize);
     size_t currentSize = snprintf_P(response, headersSize, http_header_tlv8, bodySize);
-    HKLOGINFO("[HKClient::sendTLVResponse] currentSize: %d strlen: %d heap: %d\r\n", currentSize, strlen(response), ESP.getFreeHeap());
     memcpy(response + currentSize, body, bodySize);
-    HKLOGINFO("[HKClient::sendTLVResponse] bodySize: %d heap: %d\r\n", bodySize, ESP.getFreeHeap());
+    free(body);
 
     send((uint8_t *) response, currentSize + bodySize);
-    HKLOGINFO("[HKClient::sendTLVResponse] heap: %d\r\n", ESP.getFreeHeap());
+    free(response);
 }
 
 void HKClient::sendTLVError(const uint8_t &state, const TLVError &error) {
@@ -345,9 +331,10 @@ void HKClient::sendTLVError(const uint8_t &state, const TLVError &error) {
 
 void HKClient::processNotifications() {
     if (millis() - lastUpdate > NOTIFICATION_UPDATE_FREQUENCY && !events.empty()) {
-        char header[sizeof(events_header_chunked)];
+        char *header = (char *) malloc(sizeof(events_header_chunked));
         strcpy_P(header, events_header_chunked);
         send((uint8_t *) header, sizeof(events_header_chunked)-1);
+        free(header);
 
         JSON json = JSON(256, std::bind(&HKClient::sendChunk, this, std::placeholders::_1, std::placeholders::_2));
         json.startObject();
@@ -380,14 +367,9 @@ void HKClient::scheduleEvent(HKCharacteristic *characteristic, HKValue newValue)
 
 // PRIVATE FUNCTIONS
 
-bool HKClient::decrypt(uint8_t *decryptedMessage, size_t &decryptedSize, const uint8_t *encryptedMessage, const size_t &encryptedSize) {
+bool HKClient::decrypt(uint8_t *decryptedMessage, const size_t &decryptedSize, const uint8_t *encryptedMessage, const size_t &encryptedSize) {
     if (!encrypted) {
         return false;
-    }
-    const size_t blockSize = 1024 + 16 + 2;
-    decryptedSize = encryptedSize / blockSize * 1024 + encryptedSize % blockSize - 16 - 2;
-    if (decryptedMessage == nullptr) {
-        return true;
     }
 
     byte nonce[12];
@@ -447,7 +429,7 @@ void HKClient::sendEncrypted(byte *message, const size_t &messageSize) {
 
         byte aead[2] = { static_cast<byte>(chunkSize % 256), static_cast<byte>(chunkSize / 256) };
 
-        byte encryptedMessage[2 + chunkSize + 16];
+        uint8_t *encryptedMessage = (uint8_t *) malloc(2 + chunkSize + 16);
         memcpy(encryptedMessage, aead, 2);
 
         byte i = 4;
@@ -465,6 +447,7 @@ void HKClient::sendEncrypted(byte *message, const size_t &messageSize) {
         chaChaPoly.computeTag(encryptedMessage + 2 + chunkSize, 16);
         payloadOffset += chunkSize;
 
-        client.write(encryptedMessage, sizeof(encryptedMessage));
+        client.write(encryptedMessage, 2 + chunkSize + 16);
+        free(encryptedMessage);
     }
 }

@@ -209,7 +209,7 @@ bool ESPHomeKit::setupMDNS() {
     String setupId = HKSETUPID;
     if (setupId.length() == 4) {
         size_t dataSize = setupId.length() + HKStorage::getAccessoryId().length() + 1;
-        char data[dataSize];
+        char *data = (char *) malloc(dataSize);
         snprintf(data, dataSize, "%s%s", setupId.c_str(), HKStorage::getAccessoryId().c_str());
         data[dataSize-1] = 0;
 
@@ -217,6 +217,7 @@ bool ESPHomeKit::setupMDNS() {
         SHA512 sha512 = SHA512();
         sha512.reset();
         sha512.update(data, 21);
+        free(data);
         sha512.finalize(shaHash, 64);
 
         String encoded = base64::encode(shaHash, 4, false);
@@ -247,10 +248,11 @@ void ESPHomeKit::handleClient() {
     for (auto it = clients.begin(); it != clients.end();) {
         size_t messageSize = (*it)->available();
         if (messageSize) {
-            uint8_t message[messageSize];
+            messageSize = (*it)->getMessageSize(messageSize);
+            uint8_t *message = (uint8_t *) malloc(messageSize);
             (*it)->receive(message, messageSize);
-            HKLOGDEBUG("[ESPHomeKit::handleClient] handle receive: %u bytes\r\n", messageSize);
             parseMessage(*it, message, messageSize);
+            free(message);
         } else {
             (*it)->processNotifications();
         }
@@ -382,7 +384,6 @@ void ESPHomeKit::parseMessage(HKClient *client, uint8_t *message, const size_t &
             for (; linePos < messageSize && message[linePos] != '\r'; linePos++) {  }
             if (linePos == messageSize) {
                 linePos = lineBegin;
-                HKLOGDEBUG("reached end linepos: %d\r\n", linePos);
                 break;
             }
             message[linePos] = 0;
@@ -390,13 +391,11 @@ void ESPHomeKit::parseMessage(HKClient *client, uint8_t *message, const size_t &
             String line = String((char *) message + lineBegin);
 
             if (line == "") {
-                HKLOGDEBUG("empty line linepos: %d\r\n", linePos);
                 break;
             }
 
             int headerDiv = line.indexOf(':');
             if (headerDiv == -1) {
-                HKLOGDEBUG("no header linepos: %d\r\n", linePos);
                 break;
             }
             String headerName = line.substring(0, headerDiv);
@@ -406,38 +405,37 @@ void ESPHomeKit::parseMessage(HKClient *client, uint8_t *message, const size_t &
             } else if (headerName.equalsIgnoreCase("Content-Length")) {
                 contentLength = headerValue.toInt();
             }
-            HKLOGDEBUG("read line: %s linebegin: %d linepos: %d\r\n", line.c_str(), lineBegin, linePos);
         }
 
-        uint8_t buffer[contentLength + 1];
+        uint8_t *buffer = (uint8_t *) malloc(contentLength + 1);
         buffer[contentLength] = 0;
         size_t tempSize = messageSize - linePos;
         memcpy(buffer, message + linePos, tempSize);
 
         if (!client->isEncrypted() && tempSize < contentLength) {
-            HKLOGDEBUG("[ESPHomeKit::parseMessage] read timeout tempSize: %u contentLength: %u\r\n", tempSize, contentLength);
-            if (!client->readBytesWithTimeout(buffer + tempSize, contentLength, 2000)) {
+            if (!client->readBytesWithTimeout(buffer + tempSize, contentLength - tempSize, 2000)) {
+                free(buffer);
+                HKLOGWARNING("[ESPHomeKit::parseMessage] Could not receive complete message: timeout\r\n");
                 return;
             }
         }
 
-        HKLOGDEBUG("[ESPHomeKit::parseMessage] method: %s url: %s contentLength: %u contentType: %s\r\n", method.c_str(), url.c_str(), contentLength, contentType.c_str());
         if (method == "PUT" && url == "/characteristics") {
-            HKLOGDEBUG("[ESPHomeKit::parseMessage] updateCharacteristics\r\n");
             onUpdateCharacteristics(client, buffer, contentLength);
+            free(buffer);
             return;
         } else if (method == "POST") {
             if (url == "/pair-setup") {
-                HKLOGDEBUG("[ESPHomeKit::parseMessage] pairSetup\r\n");
                 onPairSetup(client, buffer, contentLength);
+                free(buffer);
                 return;
             } else if (url == "/pair-verify") {
-                HKLOGDEBUG("[ESPHomeKit::parseMessage] pairVerify\r\n");
                 onPairVerify(client, buffer, contentLength);
+                free(buffer);
                 return;
             } else if (url == "/pairings") {
-                HKLOGDEBUG("[ESPHomeKit::parseMessage] pairings\r\n");
                 onPairings(client, buffer, contentLength);
+                free(buffer);
                 return;
             }
         }

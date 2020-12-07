@@ -77,7 +77,7 @@ std::vector<HKTLV *> HKTLV::parseTLV(const uint8_t *body, const size_t &size) {
             tlvSize += body[j];
         }
 
-        uint8_t data[tlvSize];
+        uint8_t *data = (uint8_t *) malloc(tlvSize);
         size_t currentPos = 0;
         while (i < size && currentPos < tlvSize && body[i] == type) {
             uint8_t chunkSize = body[++i];
@@ -87,6 +87,7 @@ std::vector<HKTLV *> HKTLV::parseTLV(const uint8_t *body, const size_t &size) {
         }
 
         message.push_back(new HKTLV(type, data, tlvSize));
+        free(data);
     }
     return message;
 }

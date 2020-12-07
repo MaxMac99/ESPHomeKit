@@ -49,6 +49,7 @@ public:
     HKClient(WiFiClient client);
     ~HKClient();
     size_t available();
+    size_t getMessageSize(const size_t &dataSize);
     void receive(uint8_t *message, const size_t &dataSize);
     bool readBytesWithTimeout(uint8_t *data, const size_t &maxLength, const uint32_t &timeout_ms);
 
@@ -59,6 +60,7 @@ public:
     uint8_t getPermission();
     int getPairingId();
     void stop();
+    void setEncryption(bool encryption);
 
     size_t prepareEncryption(uint8_t *accessoryPublicKey, uint8_t *encryptedResponseData, const uint8_t *devicePublicKey);
     bool finishEncryption(uint8_t *encryptedData, const size_t &encryptedSize);
@@ -77,7 +79,7 @@ public:
 
     void sendEvents(ClientEvent *event);
 private:
-    bool decrypt(uint8_t *decryptedMessage, size_t &decryptedSize, const uint8_t *encryptedMessage, const size_t &encryptedSize);
+    bool decrypt(uint8_t *decryptedMessage, const size_t &decryptedSize, const uint8_t *encryptedMessage, const size_t &encryptedSize);
     void sendEncrypted(byte *message, const size_t &messageSize);
 private:
     WiFiClient client;

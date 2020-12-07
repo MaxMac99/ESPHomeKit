@@ -85,7 +85,7 @@ Srp::Srp(const char *pincode)
     mbedtls_mpi x;
     mbedtls_mpi_init(&x);
     {
-        uint8_t message[sizeof(srp_salt) + 64];
+        uint8_t *message = (uint8_t *) malloc(sizeof(srp_salt) + 64);
         memcpy(message, srp_salt, sizeof(srp_salt));
 
         char pinMessageCopy[21];
@@ -93,8 +93,9 @@ Srp::Srp(const char *pincode)
         strcat(pinMessageCopy, pincode);
 
         crypto_hash_sha512(message + sizeof(srp_salt), (uint8_t *)pinMessageCopy, sizeof(pinMessageCopy));
-        crypto_hash_sha512(message, message, sizeof(message));
+        crypto_hash_sha512(message, message, sizeof(srp_salt) + 64);
         err_code = mbedtls_mpi_read_binary(&x, message, 64);
+        free(message);
         MPI_ERROR_CHECK(err_code);
     }
 
@@ -196,12 +197,13 @@ uint8_t Srp::setA(uint8_t* abuf, uint16_t length, moretime_t moretime)
             mbedtls_mpi u;
             mbedtls_mpi_init(&u);
             {
-                uint8_t message[length + sizeof(srp_B)];
+                uint8_t *message = (uint8_t *) malloc(length + sizeof(srp_B));
                 memcpy(message, abuf, length);
                 memcpy(message + length, srp_B, sizeof(srp_B));
-                crypto_hash_sha512(message, message, sizeof(message));
+                crypto_hash_sha512(message, message, length + sizeof(srp_B));
 
                 err_code = mbedtls_mpi_read_binary(&u, message, 64);
+                free(message);
                 MPI_ERROR_CHECK(err_code);
             }
 
@@ -260,7 +262,8 @@ uint8_t Srp::setA(uint8_t* abuf, uint16_t length, moretime_t moretime)
 
     // getM1 - username s abuf srp_B K
     {
-        uint8_t message[sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp_salt) + length + 384 + sizeof(srp_K)];
+        size_t messageSize = sizeof(srp_N_hash_srp_G_hash) + 64 + sizeof(srp_salt) + length + 384 + sizeof(srp_K);
+        uint8_t *message = (uint8_t *) malloc(messageSize);
         uint8_t *srp_N_hash_srp_G_hash_buf = (uint8_t *)malloc(sizeof(srp_N_hash_srp_G_hash));
         memcpy_P(srp_N_hash_srp_G_hash_buf, srp_N_hash_srp_G_hash, sizeof(srp_N_hash_srp_G_hash));
         memcpy(message, srp_N_hash_srp_G_hash, sizeof(srp_N_hash_srp_G_hash));
@@ -278,25 +281,28 @@ uint8_t Srp::setA(uint8_t* abuf, uint16_t length, moretime_t moretime)
         if (srp_clientM1)
         {
             uint8_t hash[64];
-            crypto_hash_sha512(hash, message, sizeof(message));
+            crypto_hash_sha512(hash, message, messageSize);
             if (memcmp(hash, srp_M1, sizeof(srp_M1)) != 0)
             {
+                free(message);
                 return 0;
             }
         }
         else
         {
-            crypto_hash_sha512(srp_M1, message, sizeof(message));
+            crypto_hash_sha512(srp_M1, message, messageSize);
         }
+        free(message);
     }
 
     // getM2
     {
-        uint8_t message[length + sizeof(srp_M1) + sizeof(srp_K)];
+        uint8_t *message = (uint8_t *) malloc(length + sizeof(srp_M1) + sizeof(srp_K));
         memcpy(message, abuf, length);
         memcpy(message + length, srp_M1, sizeof(srp_M1));
         memcpy(message + length + sizeof(srp_M1), srp_K, sizeof(srp_K));
-        crypto_hash_sha512(srp_M2, message, sizeof(message));
+        crypto_hash_sha512(srp_M2, message, length + sizeof(srp_M1) + sizeof(srp_K));
+        free(message);
     }
 
     return 1;
@@ -345,7 +351,7 @@ uint8_t* Srp::getK(void)
 
 void crypto_sha512hmac(uint8_t* hash, uint8_t* salt, uint8_t salt_length, uint8_t* data, uint8_t data_length)
 {
-    uint8_t message1[128 + data_length];
+    uint8_t *message1 = (uint8_t *) malloc(128 + data_length);
     uint8_t message2[128 + 64];
 
     memset(message1, 0x36, 128);
@@ -356,7 +362,8 @@ void crypto_sha512hmac(uint8_t* hash, uint8_t* salt, uint8_t salt_length, uint8_
         message2[i] = 0x5C ^ salt[i];
     }
     memcpy(message1 + 128, data, data_length);
-    crypto_hash_sha512(message2 + 128, message1, sizeof(message1));
+    crypto_hash_sha512(message2 + 128, message1, 128 + data_length);
+    free(message1);
     crypto_hash_sha512(hash, message2, sizeof(message2));
 }
 
@@ -370,24 +377,26 @@ uint8_t crypto_verifyAndDecrypt(const uint8_t* key, uint8_t* nonce, uint8_t* enc
 {
     uint8_t zeros64[64];
     memset(zeros64, 0, 64);
-    uint8_t polykey[sizeof(zeros64)];
+    uint8_t polykey[64];
     crypto_stream_chacha20_xor(polykey, zeros64, sizeof(zeros64), nonce, key, 0);
 
     uint8_t padding = (16 - length % 16) % 16;
-    uint8_t message[length + padding + 16];
+    uint8_t *message = (uint8_t *) malloc(length + padding + 16);
     memcpy(message, encrypted, length);
     memset(message + length, 0, padding + 16);
     message[length + padding + 8] = (uint8_t)length;
     message[length + padding + 9] = (uint8_t)(length >> 8);
 
-    if (crypto_onetimeauth_poly1305_verify(mac, message, sizeof(message), polykey) != 0)
+    if (crypto_onetimeauth_poly1305_verify(mac, message, length + padding + 16, polykey) != 0)
     {
         // Fail
+        free(message);
         return 0;
     }
     else
     {
         crypto_stream_chacha20_xor(output_buf, message, length, nonce, key, 1);
+        free(message);
         return 1;
     }
 }
@@ -396,20 +405,21 @@ void crypto_encryptAndSeal(const uint8_t* key, uint8_t* nonce, uint8_t* plain, u
 {
     uint8_t zeros64[64];
     memset(zeros64, 0, 64);
-    uint8_t polykey[sizeof(zeros64)];
+    uint8_t polykey[64];
     crypto_stream_chacha20_xor(polykey, zeros64, sizeof(zeros64), nonce, key, 0);
 
     uint8_t padding = (16 - length % 16) % 16;
-    uint8_t message[length + padding + 16];
+    uint8_t *message = (uint8_t *) malloc(length + padding + 16);
 
     crypto_stream_chacha20_xor(message, plain, length, nonce, key, 1);
     memset(message + length, 0, padding + 16);
     message[length + padding + 8] = (uint8_t)length;
     message[length + padding + 9] = (uint8_t)(length >> 8);
 
-    crypto_onetimeauth_poly1305(output_mac, message, sizeof(message), polykey);
+    crypto_onetimeauth_poly1305(output_mac, message, length + padding + 16, polykey);
 
     memcpy(output_buf, message, length);
+    free(message);
 }
 
 void hkdf(uint8_t *target, uint8_t *ikm, uint8_t ikmLength, uint8_t *salt, uint8_t saltLength, uint8_t *info, uint8_t infoLength) {

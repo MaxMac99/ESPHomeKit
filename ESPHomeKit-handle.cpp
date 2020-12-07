@@ -4,9 +4,10 @@
 void ESPHomeKit::onGetAccessories(HKClient *client) {
     HKLOGINFO("[HKClient::onGetAccessories] Get Accessories\r\n");
 
-    char header[sizeof(http_header_200_chunked)];
+    char *header = (char *) malloc(sizeof(http_header_200_chunked));
     strcpy_P(header, http_header_200_chunked);
     client->send((uint8_t *) header, sizeof(http_header_200_chunked)-1);
+    free(header);
 
     JSON json = JSON(1024, std::bind(&HKClient::sendChunk, client, std::placeholders::_1, std::placeholders::_2));
     json.startObject();
@@ -78,13 +79,15 @@ void ESPHomeKit::onGetCharacteristics(HKClient *client, String id, bool meta, bo
     }
 
     if (success) {
-        char response[sizeof(http_header_200_chunked)];
+        char *response = (char *) malloc(sizeof(http_header_200_chunked));
         strcpy_P(response, http_header_200_chunked);
         client->send((uint8_t *) response, sizeof(http_header_200_chunked)-1);
+        free(response);
     } else {
-        char response[sizeof(http_header_207_chunked)];
+        char *response = (char *) malloc(sizeof(http_header_207_chunked));
         strcpy_P(response, http_header_207_chunked);
         client->send((uint8_t *) response, sizeof(http_header_207_chunked)-1);
+        free(response);
     }
 
     JSON json = JSON(1024, std::bind(&HKClient::sendChunk, client, std::placeholders::_1, std::placeholders::_2));
@@ -167,9 +170,10 @@ void ESPHomeKit::onIdentify(HKClient *client) {
         return;
     }
     
-    char message[sizeof(http_header_204)];
+    char *message = (char *) malloc(sizeof(http_header_204));
     strcpy_P(message, http_header_204);
     client->send((uint8_t *) message, sizeof(http_header_204)-1);
+    free(message);
 
     if (!accessory) {
         return;
@@ -193,12 +197,12 @@ void ESPHomeKit::onIdentify(HKClient *client) {
 void ESPHomeKit::onUpdateCharacteristics(HKClient *client, uint8_t *message, const size_t &messageSize) {
     HKLOGINFO("[HKClient::onUpdateCharacteristics] Update Characteristics\r\n");
 
-    char jsonBodyStr[messageSize+1];
+    char *jsonBodyStr = (char *) malloc(messageSize+1);
     memcpy(jsonBodyStr, message, messageSize);
     jsonBodyStr[messageSize] = 0;
     String jsonBody = String(jsonBodyStr);
+    free(jsonBodyStr);
 
-    HKLOGDEBUG("jsonBody begin: %s\r\n", jsonBody.substring(0, 20).c_str());
     if (jsonBody.substring(0, 20) != "{\"characteristics\":[") {
         HKLOGERROR("[HKClient::onUpdateCharacteristics] Could not deserialize json beginning not equal\r\n");
         client->sendJSONErrorResponse(400, HAPStatusInvalidValue);
@@ -214,12 +218,10 @@ void ESPHomeKit::onUpdateCharacteristics(HKClient *client, uint8_t *message, con
         }
         String item = jsonBody.substring(begin + 1, end);
 
-        HKLOGDEBUG("jsonBody item: %s\r\n", item.c_str());
         int aidPos = item.indexOf("\"aid\"");
         int iidPos = item.indexOf("\"iid\"");
         int evPos = item.indexOf("\"ev\"");
         int valuePos = item.indexOf("\"value\"");
-        HKLOGDEBUG("jsonBody aidPos: %d iidPos: %d evPos: %d valuePos: %d\r\n", aidPos, iidPos, evPos, valuePos);
         if (aidPos == -1 || iidPos == -1 || (evPos == -1 && valuePos == -1)) {
             break;
         }
@@ -228,14 +230,12 @@ void ESPHomeKit::onUpdateCharacteristics(HKClient *client, uint8_t *message, con
         int aidEndPos = item.indexOf(',', aidPos);
         int iidBeginPos = item.indexOf(':', iidPos);
         int iidEndPos = item.indexOf(',', iidPos);
-        HKLOGDEBUG("jsonBody aidBeginPos: %d aidEndPos: %d iidBeginPos: %d iidEndPos: %d\r\n", aidBeginPos, aidEndPos, iidBeginPos, iidEndPos);
         if (aidBeginPos == -1 || aidEndPos == -1 || iidBeginPos == -1 || iidEndPos == -1) {
             break;
         }
 
         int aid = item.substring(aidBeginPos + 1, aidEndPos).toInt();
         int iid = item.substring(iidBeginPos + 1, iidEndPos).toInt();
-        HKLOGDEBUG("jsonBody aid: %d iid: %d\r\n", aid, iid);
         if (aid == 0 || iid == 0) {
             break;
         }
@@ -279,15 +279,15 @@ void ESPHomeKit::onUpdateCharacteristics(HKClient *client, uint8_t *message, con
             }
         }
 
-        HKLOGDEBUG("jsonBody ev: %s value: %s\r\n", ev.c_str(), value.c_str());
         processUpdateCharacteristic(client, aid, iid, ev, value);
 
         cursor = end + 1;
     }
 
-    char response[sizeof(http_header_204)];
+    char *response = (char *) malloc(sizeof(http_header_204));
     strcpy_P(response, http_header_204);
     client->send((uint8_t *) response, sizeof(http_header_204)-1);
+    free(response);
 }
 
 HAPStatus ESPHomeKit::processUpdateCharacteristic(HKClient *client, uint aid, uint iid, String ev, String value) {
@@ -324,7 +324,6 @@ HAPStatus ESPHomeKit::processUpdateCharacteristic(HKClient *client, uint aid, ui
  * @param MessageSize Size of message
  */
 void ESPHomeKit::onPairSetup(HKClient *client, uint8_t *message, const size_t &messageSize) {
-    HKLOGDEBUG("[ESPHomeKit::onPairSetup] begin messageSize: %d\r\n", messageSize);
     std::vector<HKTLV *> tlvs = HKTLV::parseTLV(message, messageSize);
 
     int8_t value = -1;
@@ -332,20 +331,19 @@ void ESPHomeKit::onPairSetup(HKClient *client, uint8_t *message, const size_t &m
     if (state) {
         value = state->getIntValue();
     }
-    HKLOGDEBUG("[ESPHomeKit::onPairSetup] state: %d\r\n", value);
 
     switch (value) {
     case 1: {
         HKLOGINFO("[HKClient::onPairSetup] Setup Step 1/3\r\n");
         if (HKStorage::isPaired()) {
-            HKLOGINFO("[HKClient::onPairSetup] Refuse to pair: Already paired\r\n");
+            HKLOGWARNING("[HKClient::onPairSetup] Refuse to pair: Already paired\r\n");
 
             client->sendTLVError(2, TLVErrorUnavailable);
             break;
         }
 
         if (isPairing()) {
-            HKLOGINFO("[HKClient::onPairSetup] Refuse to pair: another pairing in process\r\n");
+            HKLOGWARNING("[HKClient::onPairSetup] Refuse to pair: another pairing in process\r\n");
 
             client->sendTLVError(2, TLVErrorBusy);
             break;
@@ -369,33 +367,26 @@ void ESPHomeKit::onPairSetup(HKClient *client, uint8_t *message, const size_t &m
         HKTLV* publicKey = HKTLV::findTLV(tlvs, TLVTypePublicKey);
         HKTLV* proof = HKTLV::findTLV(tlvs, TLVTypeProof);
         if (!publicKey || !proof) {
-            HKLOGINFO("[HKClient::onPairSetup] Could not find Public Key or Proof in Message\r\n");
+            HKLOGWARNING("[HKClient::onPairSetup] Could not find Public Key or Proof in Message\r\n");
             client->sendTLVError(4, TLVErrorAuthentication);
             client->setPairing(false);
             break;
         }
 
-        HKLOGINFO("[HKClient::onPairSetup] 2/3 heap: %d\r\n", ESP.getFreeHeap());
         srp->setA(publicKey->getValue(), publicKey->getSize(), nullptr);
-        HKLOGINFO("[HKClient::onPairSetup] 2/3 heap: %d\r\n", ESP.getFreeHeap());
 
         if (srp->checkM1(proof->getValue(), proof->getSize())) {
-            HKLOGINFO("[HKClient::onPairSetup] 2/3 heap: %d\r\n", ESP.getFreeHeap());
             for (auto it = tlvs.begin(); it != tlvs.end();) {
                 delete *it;
                 it = tlvs.erase(it);
             }
-            HKLOGINFO("[HKClient::onPairSetup] 2/3 heap: %d\r\n", ESP.getFreeHeap());
             tlvs.push_back(new HKTLV(TLVTypeState, 4, 1));
-            HKLOGINFO("[HKClient::onPairSetup] 2/3 heap: %d\r\n", ESP.getFreeHeap());
             tlvs.push_back(new HKTLV(TLVTypeProof, srp->getM2(), 64));
-            HKLOGINFO("[HKClient::onPairSetup] 2/3 heap: %d\r\n", ESP.getFreeHeap());
 
             client->sendTLVResponse(tlvs);
-            HKLOGINFO("[HKClient::onPairSetup] 2/3 heap: %d\r\n", ESP.getFreeHeap());
         } else {
             //return error
-            HKLOGINFO("[HKClient::onPairSetup] SRP Error\r\n");
+            HKLOGERROR("[HKClient::onPairSetup] SRP Error\r\n");
             client->sendTLVError(4, TLVErrorAuthentication);
             client->setPairing(false);
         }
@@ -411,26 +402,28 @@ void ESPHomeKit::onPairSetup(HKClient *client, uint8_t *message, const size_t &m
 
         HKTLV *encryptedTLV = HKTLV::findTLV(tlvs, TLVTypeEncryptedData);
         if (!encryptedTLV) {
-            HKLOGINFO("[HKClient::onPairSetup] Failed: Could not find Encrypted Data\r\n");
+            HKLOGERROR("[HKClient::onPairSetup] Failed: Could not find Encrypted Data\r\n");
             client->sendTLVError(6, TLVErrorAuthentication);
             client->setPairing(false);
             break;
         }
 
         size_t decryptedDataSize = encryptedTLV->getSize() - 16;
-        uint8_t decryptedData[decryptedDataSize];
+        uint8_t *decryptedData = (uint8_t *) malloc(decryptedDataSize);
 
         if (!crypto_verifyAndDecrypt(sharedSecret, (uint8_t *) "PS-Msg05", encryptedTLV->getValue(), decryptedDataSize, decryptedData, encryptedTLV->getValue() + decryptedDataSize)) {
-            HKLOGINFO("[HKClient::onPairSetup] Decryption failed: MAC not equal\r\n");
+            HKLOGERROR("[HKClient::onPairSetup] Decryption failed: MAC not equal\r\n");
+            free(decryptedData);
             client->sendTLVError(6, TLVErrorAuthentication);
             client->setPairing(false);
             break;
         }
 
         std::vector<HKTLV *> decryptedMessage = HKTLV::parseTLV(decryptedData, decryptedDataSize);
+        free(decryptedData);
         HKTLV *deviceId = HKTLV::findTLV(decryptedMessage, TLVTypeIdentifier);
         if (!deviceId) {
-            HKLOGINFO("[HKClient::onPairSetup] Decryption failed: Device ID not found in decrypted Message\r\n");
+            HKLOGERROR("[HKClient::onPairSetup] Decryption failed: Device ID not found in decrypted Message\r\n");
             for (auto msg : decryptedMessage) {
                 delete msg;
             }
@@ -441,7 +434,7 @@ void ESPHomeKit::onPairSetup(HKClient *client, uint8_t *message, const size_t &m
 
         HKTLV *publicKey = HKTLV::findTLV(decryptedMessage, TLVTypePublicKey);
         if (!publicKey) {
-            HKLOGINFO("[HKClient::onPairSetup] Decryption failed: Public Key not found in decrypted Message\r\n");
+            HKLOGERROR("[HKClient::onPairSetup] Decryption failed: Public Key not found in decrypted Message\r\n");
             for (auto msg : decryptedMessage) {
                 delete msg;
             }
@@ -452,7 +445,7 @@ void ESPHomeKit::onPairSetup(HKClient *client, uint8_t *message, const size_t &m
 
         HKTLV *signature = HKTLV::findTLV(decryptedMessage, TLVTypeSignature);
         if (!signature) {
-            HKLOGINFO("[HKClient::onPairSetup] Decryption failed: Signature not found in decrypted Message\r\n");
+            HKLOGERROR("[HKClient::onPairSetup] Decryption failed: Signature not found in decrypted Message\r\n");
             for (auto msg : decryptedMessage) {
                 delete msg;
             }
@@ -467,13 +460,14 @@ void ESPHomeKit::onPairSetup(HKClient *client, uint8_t *message, const size_t &m
         hkdf(deviceX, srp->getK(), 64, (uint8_t *) salt2, sizeof(salt2)-1, (uint8_t *) info2, sizeof(info2)-1);
 
         uint64_t deviceInfoSize = sizeof(deviceX) + deviceId->getSize() + publicKey->getSize();
-        uint8_t deviceInfo[deviceInfoSize];
+        uint8_t *deviceInfo = (uint8_t *) malloc(deviceInfoSize);
         memcpy(deviceInfo, deviceX, sizeof(deviceX));
         memcpy(deviceInfo + sizeof(deviceX), deviceId->getValue(), deviceId->getSize());
         memcpy(deviceInfo + sizeof(deviceX) + deviceId->getSize(), publicKey->getValue(), publicKey->getSize());
 
         if (!Ed25519::verify(signature->getValue(), publicKey->getValue(), deviceInfo, deviceInfoSize)) {
-            HKLOGINFO("[HKClient::onPairSetup] Could not verify Ed25519 Device Info, Signature and Public Key\r\n");
+            HKLOGERROR("[HKClient::onPairSetup] Could not verify Ed25519 Device Info, Signature and Public Key\r\n");
+            free(deviceInfo);
             for (auto msg : decryptedMessage) {
                 delete msg;
             }
@@ -481,6 +475,7 @@ void ESPHomeKit::onPairSetup(HKClient *client, uint8_t *message, const size_t &m
             client->setPairing(false);
             break;
         }
+        free(deviceInfo);
 
         int result = HKStorage::addPairing((char *) deviceId->getValue(), publicKey->getValue(), 1);
         if (result) {
@@ -490,7 +485,7 @@ void ESPHomeKit::onPairSetup(HKClient *client, uint8_t *message, const size_t &m
         // M6 Response Generation
         String accessoryId = HKStorage::getAccessoryId();
         size_t accessoryInfoSize = 32 + accessoryId.length() + 32;
-        uint8_t accessoryInfo[accessoryInfoSize];
+        uint8_t *accessoryInfo = (uint8_t *) malloc(accessoryInfoSize);
         const char salt3[] = "Pair-Setup-Accessory-Sign-Salt";
         const char info3[] = "Pair-Setup-Accessory-Sign-Info\001";
         hkdf(accessoryInfo, srp->getK(), 64, (uint8_t *) salt3, sizeof(salt3)-1, (uint8_t *) info3, sizeof(info3)-1);
@@ -501,6 +496,7 @@ void ESPHomeKit::onPairSetup(HKClient *client, uint8_t *message, const size_t &m
 
         uint8_t accessorySignature[64];
         Ed25519::sign(accessorySignature, HKStorage::getAccessoryKey().privateKey, HKStorage::getAccessoryKey().publicKey, accessoryInfo, accessoryInfoSize);
+        free(accessoryInfo);
 
         std::vector<HKTLV *> responseMessage = {
                 new HKTLV(TLVTypeIdentifier, (uint8_t *) accessoryId.c_str(), accessoryId.length()),
@@ -508,11 +504,12 @@ void ESPHomeKit::onPairSetup(HKClient *client, uint8_t *message, const size_t &m
                 new HKTLV(TLVTypeSignature, accessorySignature, 64)
         };
         size_t responseDataSize = HKTLV::getFormattedTLVSize(responseMessage);
-        uint8_t responseData[responseDataSize];
+        uint8_t *responseData = (uint8_t *) malloc(responseDataSize);
         HKTLV::formatTLV(responseMessage, responseData);
 
-        uint8_t encryptedResponseData[responseDataSize + 16];
+        uint8_t *encryptedResponseData = (uint8_t *) malloc(responseDataSize + 16);
         crypto_encryptAndSeal(sharedSecret, (uint8_t *) "PS-Msg06", responseData, responseDataSize, encryptedResponseData, encryptedResponseData + responseDataSize);
+        free(responseData);
 
         for (auto msg : decryptedMessage) {
             delete msg;
@@ -523,6 +520,7 @@ void ESPHomeKit::onPairSetup(HKClient *client, uint8_t *message, const size_t &m
         }
         tlvs.push_back(new HKTLV(TLVTypeState, 6, 1));
         tlvs.push_back(new HKTLV(TLVTypeEncryptedData, encryptedResponseData, responseDataSize + 16));
+        free(encryptedResponseData);
 
         client->sendTLVResponse(tlvs);
         client->setPairing(false);
@@ -563,14 +561,14 @@ void ESPHomeKit::onPairVerify(HKClient *client, uint8_t *message, const size_t &
         HKLOGINFO("[HKClient::onPairVerify] Verify Step 1/2\r\n");
         HKTLV *deviceKeyTLV = HKTLV::findTLV(tlvs, TLVTypePublicKey);
         if (!deviceKeyTLV) {
-            HKLOGINFO("[HKClient::onPairVerify] Device Key not Found\r\n");
+            HKLOGERROR("[HKClient::onPairVerify] Device Key not Found\r\n");
             client->sendTLVError(2, TLVErrorUnknown);
             break;
         }
 
         size_t encryptedResponseSize = client->prepareEncryption(nullptr, nullptr, nullptr);
         uint8_t accessoryPublicKey[32];
-        uint8_t encryptedResponseData[encryptedResponseSize];
+        uint8_t *encryptedResponseData = (uint8_t *) malloc(encryptedResponseSize);
         client->prepareEncryption(accessoryPublicKey, encryptedResponseData, deviceKeyTLV->getValue());
 
         std::vector<HKTLV *> responseMessage = {
@@ -578,6 +576,7 @@ void ESPHomeKit::onPairVerify(HKClient *client, uint8_t *message, const size_t &
                 new HKTLV(TLVTypePublicKey, accessoryPublicKey, 32),
                 new HKTLV(TLVTypeEncryptedData, encryptedResponseData, encryptedResponseSize)
         };
+        free(encryptedResponseData);
 
         client->sendTLVResponse(responseMessage);
     }
@@ -592,13 +591,14 @@ void ESPHomeKit::onPairVerify(HKClient *client, uint8_t *message, const size_t &
 
         HKTLV *encryptedData = HKTLV::findTLV(tlvs, TLVTypeEncryptedData);
         if (!encryptedData) {
-            HKLOGINFO("[HKClient::onPairVerify] Could not find encrypted data\r\n");
+            HKLOGERROR("[HKClient::onPairVerify] Could not find encrypted data\r\n");
             client->sendTLVError(4, TLVErrorUnknown);
             client->resetEncryption();
             break;
         }
 
         if (!client->finishEncryption(encryptedData->getValue(), encryptedData->getSize())) {
+            HKLOGERROR("[HKClient::onPairVerify] Could not finish encryption\r\n");
             client->sendTLVError(4, TLVErrorAuthentication);
             break;
         }
@@ -607,6 +607,9 @@ void ESPHomeKit::onPairVerify(HKClient *client, uint8_t *message, const size_t &
                 new HKTLV(TLVTypeState, 4, 1)
         };
         client->sendTLVResponse(responseMessage);
+
+        client->resetEncryption();
+        client->setEncryption(true);
     }
     break;
     default:
@@ -680,12 +683,13 @@ void ESPHomeKit::onPairings(HKClient *client, uint8_t *message, const size_t &me
             break;
         }
 
-        char deviceIdentifier[deviceId->getSize()];
+        char *deviceIdentifier = (char *) malloc(deviceId->getSize());
         strncpy(deviceIdentifier, (char *) deviceId->getValue(), deviceId->getSize());
         Pairing *comparePairing = HKStorage::findPairing(deviceIdentifier);
         if (comparePairing) {
             if (devicePublicKey->getSize() != 32 || memcmp(devicePublicKey->getValue(), comparePairing->deviceKey, 32) != 0) {
                 HKLOGWARNING("[HKClient::onPairings] Failed to add pairing: pairing public key differs from given one\r\n");
+                free(deviceIdentifier);
                 delete comparePairing;
                 client->sendTLVError(2, TLVErrorUnknown);
                 break;
@@ -694,6 +698,7 @@ void ESPHomeKit::onPairings(HKClient *client, uint8_t *message, const size_t &me
 
             if (HKStorage::updatePairing(deviceIdentifier, *devicePermission->getValue())) {
                 HKLOGWARNING("[HKClient::onPairings] Failed to add pairing: storage error\r\n");
+                free(deviceIdentifier);
                 client->sendTLVError(2, TLVErrorUnknown);
                 break;
             }
@@ -703,10 +708,12 @@ void ESPHomeKit::onPairings(HKClient *client, uint8_t *message, const size_t &me
             int r = HKStorage::addPairing(deviceIdentifier, devicePublicKey->getValue(), *devicePermission->getValue());
             if (r == -2) {
                 HKLOGWARNING("[HKClient::onPairings] Failed to add pairing: max peers\r\n");
+                free(deviceIdentifier);
                 client->sendTLVError(2, TLVErrorMaxPeers);
                 break;
             } else if (r != 0) {
                 HKLOGWARNING("[HKClient::onPairings] Failed to add pairing: Storage error\r\n");
+                free(deviceIdentifier);
                 client->sendTLVError(2, TLVErrorUnknown);
                 break;
             }
@@ -715,6 +722,7 @@ void ESPHomeKit::onPairings(HKClient *client, uint8_t *message, const size_t &me
 
             HKLOGINFO("[HKClient::onPairings] Added pairing with id=%s\r\n", deviceIdentifier);
         }
+        free(deviceIdentifier);
 
         std::vector<HKTLV *> response = {
             new HKTLV(TLVTypeState, 2, 1),
@@ -741,7 +749,7 @@ void ESPHomeKit::onPairings(HKClient *client, uint8_t *message, const size_t &me
             break;
         }
 
-        char deviceIdentifier[deviceId->getSize()];
+        char *deviceIdentifier = (char *) malloc(deviceId->getSize());
         strncpy(deviceIdentifier, (char *) deviceId->getValue(), deviceId->getSize());
         Pairing *comparePairing = HKStorage::findPairing(deviceIdentifier);
         if (comparePairing) {
@@ -749,6 +757,7 @@ void ESPHomeKit::onPairings(HKClient *client, uint8_t *message, const size_t &me
 
             int result = HKStorage::removePairing(deviceIdentifier);
             if (result) {
+                free(deviceIdentifier);
                 delete comparePairing;
                 HKLOGERROR("[HKClient::onPairings] Failed to remove pairing: storage error\r\n");
                 client->sendTLVError(2, TLVErrorUnknown);
@@ -756,11 +765,13 @@ void ESPHomeKit::onPairings(HKClient *client, uint8_t *message, const size_t &me
             }
 
             HKLOGINFO("[HKClient::onPairings] Removed pairing with id=%s\r\n", deviceIdentifier);
-#if HKLOGLEVEL <= 1
+            free(deviceIdentifier);
+
+            #if HKLOGLEVEL <= 1
             for (auto pPairing : HKStorage::getPairings()) {
                 HKLOGINFO("[HKStorage] Pairing id=%i deviceId=%36s permissions=%i\r\n", pPairing->id, pPairing->deviceId, pPairing->permissions);
             }
-#endif
+            #endif
 
             for (auto client : clients) {
                 if (client->getPairingId() == comparePairing->id) {
