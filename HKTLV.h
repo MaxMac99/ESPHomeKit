@@ -6,6 +6,7 @@
 #define HAP_SERVER_HKTLV_H
 
 #include <Arduino.h>
+#include <HKDebug.h>
 
 enum TLVType {
     TLVTypeMethod = 0,        // (integer) Method to use for pairing. See PairMethod
@@ -45,20 +46,20 @@ enum TLVError {
 
 class HKTLV {
 public:
-    HKTLV(byte type, byte *value, size_t size);
-    HKTLV(byte type, uint8_t pValue, size_t size);
+    HKTLV(uint8_t type, uint8_t *value, size_t size);
+    HKTLV(uint8_t type, uint8_t pValue, size_t size);
     ~HKTLV();
-    byte getType() const;
+    uint8_t getType() const;
     size_t getSize() const;
-    byte *getValue();
+    uint8_t *getValue();
     int getIntValue();
-    static std::vector<byte> formatTLV(const std::vector<HKTLV *> &values);
-    static std::vector<HKTLV *> parseTLV(const std::vector<byte> &body);
-    static std::vector<HKTLV *> parseTLV(const byte *body, size_t size);
+    static size_t getFormattedTLVSize(const std::vector<HKTLV *> &values);
+    static void formatTLV(const std::vector<HKTLV *> &values, uint8_t *message);
+    static std::vector<HKTLV *> parseTLV(const uint8_t *body, const size_t &size);
     static HKTLV *findTLV(const std::vector<HKTLV *> &values, const TLVType &type);
 private:
-    byte type;
-    byte *value;
+    uint8_t type;
+    uint8_t *value;
     size_t size;
 };
 

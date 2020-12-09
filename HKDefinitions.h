@@ -214,34 +214,34 @@ enum HKCharacteristicType {
 };
 
 enum HKFormat {
-    FormatBool,
-    FormatUInt8,
-    FormatUInt16,
-    FormatUInt32,
-    FormatUInt64,
-    FormatInt,
-    FormatFloat,
-    FormatString,
-    FormatTLV,
-    FormatData
+    HKFormatBool,
+    HKFormatUInt8,
+    HKFormatUInt16,
+    HKFormatUInt32,
+    HKFormatUInt64,
+    HKFormatInt,
+    HKFormatFloat,
+    HKFormatString,
+    HKFormatTLV,
+    HKFormatData
 };
 
 enum HKUnit {
-    UnitNone,
-    Celsius,
-    UnitPercentage,
-    UnitArcdegrees,
-    UnitLux,
-    UnitSeconds
+    HKUnitNone,
+    HKUnitCelsius,
+    HKUnitPercentage,
+    HKUnitArcdegrees,
+    HKUnitLux,
+    HKUnitSeconds
 };
 
 enum HKPermission {
-    PermissionPairedRead = 1,
-    PermissionPairedWrite = 2,
-    PermissionNotify = 4,
-    PermissionAdditionalAuthorization = 8,
-    PermissionTimedWrite = 16,
-    PermissionHidden = 32
+    HKPermissionPairedRead = 1,
+    HKPermissionPairedWrite = 2,
+    HKPermissionNotify = 4,
+    HKPermissionAdditionalAuthorization = 8,
+    HKPermissionTimedWrite = 16,
+    HKPermissionHidden = 32
 };
 
 enum HKCharacteristicFormat {
@@ -269,7 +269,7 @@ public:
         // Data
     };
 
-    inline HKValue() : isNull(true), isStatic(false), format(FormatBool) {};
+    inline HKValue() : isNull(true), isStatic(false), format(HKFormatBool) {};
     inline explicit HKValue(HKFormat format) : isNull(false), isStatic(false), format(format) {};
     inline HKValue(HKFormat format, bool value) : isNull(false), isStatic(false), format(format), boolValue(value) {};
     inline explicit HKValue(HKFormat format, int value) : isNull(false), isStatic(false), format(format), intValue(value) {};
@@ -286,20 +286,20 @@ public:
     };
     inline HKValue(const HKValue &other) : isNull(other.isNull), isStatic(other.isStatic), format(other.format) {
         switch (format) {
-            case FormatBool:
+            case HKFormatBool:
                 boolValue = other.boolValue;
                 break;
-            case FormatInt:
-            case FormatUInt8:
-            case FormatUInt16:
-            case FormatUInt32:
-            case FormatUInt64:
+            case HKFormatInt:
+            case HKFormatUInt8:
+            case HKFormatUInt16:
+            case HKFormatUInt32:
+            case HKFormatUInt64:
                 intValue = other.intValue;
                 break;
-            case FormatFloat:
+            case HKFormatFloat:
                 floatValue = other.floatValue;
                 break;
-            case FormatString:
+            case HKFormatString:
                 stringValue = strdup(other.stringValue);
                 break;
             default:
@@ -307,7 +307,7 @@ public:
         }
     };
     inline ~HKValue() {
-        if (format == FormatString) {
+        if (format == HKFormatString) {
             free((char *) stringValue);
         }
     }
@@ -322,19 +322,19 @@ public:
         }
 
         switch (format) {
-            case FormatBool:
+            case HKFormatBool:
                 return boolValue == b.boolValue;
-            case FormatUInt8:
-            case FormatUInt16:
-            case FormatUInt32:
-            case FormatUInt64:
-            case FormatInt:
+            case HKFormatUInt8:
+            case HKFormatUInt16:
+            case HKFormatUInt32:
+            case HKFormatUInt64:
+            case HKFormatInt:
                 return intValue == b.intValue;
-            case FormatFloat:
+            case HKFormatFloat:
                 return floatValue == b.floatValue;
-            case FormatString:
+            case HKFormatString:
                 return !strcmp(stringValue, b.stringValue);
-            case FormatTLV:
+            case HKFormatTLV:
                 /*if (!tlvValues && !b.tlvValues) {
                     return true;
                 }
@@ -344,7 +344,7 @@ public:
                 */
                 return false;
 
-            case FormatData:
+            case HKFormatData:
                 return false;
             default:
                 return false;

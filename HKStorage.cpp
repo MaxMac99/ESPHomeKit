@@ -89,6 +89,10 @@ String readString(uint16_t address, uint16_t maxLength) {
     return data;
 }
 
+/**
+ * @brief Check if storage is still valid
+ * 
+ */
 void HKStorage::checkStorage() {
     String comparing = readString(STORAGE_CHECK_ADDR, STORAGE_CHECK_LEN);
     if (comparing != STORAGE_CHECK) {
@@ -96,6 +100,10 @@ void HKStorage::checkStorage() {
     }
 }
 
+/**
+ * @brief Reset complete EEPROM
+ * 
+ */
 void HKStorage::reset() {
     HKLOGINFO("[HKStorage::reset] Reset\r\n");
     writeString(STORAGE_CHECK_ADDR, STORAGE_CHECK, STORAGE_CHECK_LEN);
@@ -106,6 +114,10 @@ void HKStorage::reset() {
     EEPROM.end();
 }
 
+/**
+ * @brief Remove all paired clients
+ * 
+ */
 void HKStorage::resetPairings() {
     EEPROM.begin(4096);
     for (uint i = PAIRINGS_ADDR; i < 4096; i++) {
@@ -115,6 +127,11 @@ void HKStorage::resetPairings() {
     HKLOGINFO("[HKStorage::resetPairings] Reset Pairings\r\n");
 }
 
+/**
+ * @brief Get stored accessory id
+ * 
+ * @return String Accessory Id
+ */
 String HKStorage::getAccessoryId() {
     EEPROM.begin(4096);
     String result = String();
@@ -138,6 +155,11 @@ String HKStorage::getAccessoryId() {
     return result;
 }
 
+/**
+ * @brief Key pair for accessory
+ * 
+ * @return KeyPair Key pair (public/private)
+ */
 KeyPair HKStorage::getAccessoryKey() {
     KeyPair zero{};
     KeyPair result{};
@@ -152,24 +174,50 @@ KeyPair HKStorage::getAccessoryKey() {
     return result;
 }
 
+/**
+ * @brief Store SSID in EEPROM
+ * 
+ * @param ssid SSID to save
+ */
 void HKStorage::saveSSID(const String &ssid) {
     writeString(SSID_ADDR, ssid, 32);
     HKLOGINFO("[HKStorage::resetPairings] Set ssid %s\r\n", readString(SSID_ADDR, 32).c_str());
 }
 
+/**
+ * @brief Store WiFi Password in EEPROM
+ * 
+ * @param password Password to save
+ */
 void HKStorage::saveWiFiPassword(const String &password) {
     writeString(WIFI_PASSWORD_ADDR, password, 64);
     HKLOGINFO("[HKStorage::resetPairings] Set password %s\r\n", readString(WIFI_PASSWORD_ADDR, 64).c_str());
 }
 
+/**
+ * @brief Get saved SSID
+ * 
+ * @return String SSID
+ */
 String HKStorage::getSSID() {
     return readString(SSID_ADDR, 32);
 }
 
+/**
+ * @brief Get saved WiFi Password
+ * 
+ * @return String Password
+ */
 String HKStorage::getWiFiPassword() {
     return readString(WIFI_PASSWORD_ADDR, 64);
 }
 
+/**
+ * @brief Is there a paired client
+ * 
+ * @return true Contains paired client
+ * @return false No paired clients
+ */
 bool HKStorage::isPaired() {
     PairingData pairingData{};
     EEPROM.begin(4096);
@@ -185,6 +233,14 @@ bool HKStorage::isPaired() {
     return false;
 }
 
+/**
+ * @brief Save paired client
+ * 
+ * @param deviceId Device Id
+ * @param deviceKey Public key of device
+ * @param permission Permissions for device
+ * @return int Successfully saved = 0
+ */
 int HKStorage::addPairing(const char *deviceId, const byte *deviceKey, byte permission) {
     int nextBlockIdx = findEmptyBlock();
 
@@ -206,6 +262,13 @@ int HKStorage::addPairing(const char *deviceId, const byte *deviceKey, byte perm
     return 0;
 }
 
+/**
+ * @brief Update permissions for stored device
+ * 
+ * @param deviceId Device Id
+ * @param permission Updated permissions for device
+ * @return int Successfully changed (0)
+ */
 int HKStorage::updatePairing(const String &deviceId, byte permission) {
     PairingData pairingData{};
     EEPROM.begin(4096);
@@ -226,6 +289,12 @@ int HKStorage::updatePairing(const String &deviceId, byte permission) {
     return -1;
 }
 
+/**
+ * @brief Find paired device with Id
+ * 
+ * @param deviceId Devie to find
+ * @return Pairing* Stored data for device
+ */
 Pairing *HKStorage::findPairing(const char *deviceId) {
     PairingData pairingData{};
     EEPROM.begin(4096);
@@ -250,6 +319,12 @@ Pairing *HKStorage::findPairing(const char *deviceId) {
     return nullptr;
 }
 
+/**
+ * @brief Remove paired device
+ * 
+ * @param deviceId Device to remove
+ * @return int Successful (0)
+ */
 int HKStorage::removePairing(const String &deviceId) {
     PairingData pairingData{};
     EEPROM.begin(4096);
@@ -270,6 +345,12 @@ int HKStorage::removePairing(const String &deviceId) {
     return -1;
 }
 
+/**
+ * @brief Is device with Admin rights paired
+ * 
+ * @return true Device with Admin rights
+ * @return false No device with Admin rights
+ */
 bool HKStorage::hasPairedAdmin() {
     PairingData pairingData{};
     EEPROM.begin(4096);
@@ -288,6 +369,11 @@ bool HKStorage::hasPairedAdmin() {
     return false;
 }
 
+/**
+ * @brief Get all connected devices
+ * 
+ * @return std::vector<Pairing *> List of connected devices
+ */
 std::vector<Pairing *> HKStorage::getPairings() {
     std::vector<Pairing *> pairings;
     PairingData pairingData{};

@@ -19,6 +19,7 @@
 #include <ArduinoJson.h>
 #include "HKClient.h"
 #include "HKService.h"
+#include "ESPHomeKit.h"
 
 struct HKValidValues {
     int count;
@@ -38,17 +39,19 @@ struct HKValidValuesRanges {
 class HKAccessory;
 class HKService;
 class HKClient;
+class ESPHomeKit;
 
 class HKCharacteristic {
 public:
     HKCharacteristic(HKCharacteristicType type, const HKValue &value, uint8_t permissions,
-                     String description, HKFormat format, HKUnit unit=UnitNone, float *minValue=nullptr, float *maxValue=nullptr, float *minStep=nullptr, uint *maxLen=nullptr, uint *maxDataLen=nullptr, HKValidValues validValues=HKValidValues(), HKValidValuesRanges validValuesRanges=HKValidValuesRanges());
+                     String description, HKFormat format, HKUnit unit=HKUnitNone, float *minValue=nullptr, float *maxValue=nullptr, float *minStep=nullptr, uint *maxLen=nullptr, uint *maxDataLen=nullptr, HKValidValues validValues=HKValidValues(), HKValidValuesRanges validValuesRanges=HKValidValuesRanges());
     virtual ~HKCharacteristic();
     virtual uint getClassId() { return HKCHARACTERISTIC_CLASS_ID; };
 
     uint getId() const;
     HKCharacteristicType getType() const;
     const HKValue &getValue() const;
+    HKService *getService();
 
     void setGetter(const std::function<const HKValue &()> &getter);
     void setSetter(const std::function<void(const HKValue)> &setter);
@@ -63,13 +66,8 @@ private:
 
     friend HKAccessory;
     friend HKService;
+    friend ESPHomeKit;
     friend HKClient;
-
-    struct ChangeCallback {
-        std::function<void(HKClient *, HKCharacteristic *, HKValue)> function;
-        HKClient *client;
-        ChangeCallback *next;
-    };
 private:
     uint id;
     HKService *service;
@@ -93,7 +91,7 @@ private:
     std::function<const HKValue &()> getter;
     std::function<void(const HKValue)> setter;
 
-    ChangeCallback *callback;
+    std::vector<HKClient *> notifiers;
 };
 
 struct ClientEvent {
@@ -106,7 +104,7 @@ class HKEvent {
 public:
     inline HKEvent(HKCharacteristic *characteristic, HKValue value) : characteristic(characteristic), value(value) {};
     inline HKCharacteristic *getCharacteristic() { return characteristic; };
-    inline HKValue getValue() { return value; };
+    inline HKValue *getValue() { return &value; };
 private:
     HKCharacteristic *characteristic;
     HKValue value;

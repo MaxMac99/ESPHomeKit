@@ -13,7 +13,6 @@
 #include <ESP8266WebServer.h>
 #include "HKTLV.h"
 #include "HKDefinitions.h"
-#include "HKServer.h"
 #include "HKCharacteristic.h"
 #include "HKStorage.h"
 
@@ -25,69 +24,76 @@ struct VerifyContext {
     byte sessionKey[32];
 };
 
-class HKServer;
 class HKEvent;
+class HKCharacteristic;
+
 struct ClientEvent;
 
-class HKClient : public WiFiClient {
-protected:
-    HKClient(HKServer *server, ClientContext* client);
+const char PROGMEM http_header_tlv8[] = "HTTP/1.1 200 OK\r\n"
+                         "Content-Type: application/pairing+tlv8\r\n"
+                         "Content-Length: %d\r\n"
+                         "Connection: keep-alive\r\n\r\n";
 
+const char PROGMEM http_header_json[] = "HTTP/1.1 %d %s\r\n"
+                         "Content-Type: application/hap+json\r\n"
+                         "Content-Length: %d\r\n"
+                         "Connection: keep-alive\r\n\r\n"
+                         "%s";
+const char PROGMEM json_status[] = "{\"status\": %d}";
+const char PROGMEM events_header_chunked[] = "EVENT/1.0 200 OK\r\n"
+                                 "Content-Type: application/hap+json\r\n"
+                                 "Transfer-Encoding: chunked\r\n\r\n";
+
+class HKClient {
 public:
-    ~HKClient() override;
-    bool received();
-    void scheduleEvent(HKCharacteristic *characteristic, HKValue newValue);
-    void sendEvents(ClientEvent *event);
+    HKClient(WiFiClient client);
+    ~HKClient();
+    size_t available();
+    size_t getMessageSize(const size_t &dataSize);
+    void receive(uint8_t *message, const size_t &dataSize);
+    bool readBytesWithTimeout(uint8_t *data, const size_t &maxLength, const uint32_t &timeout_ms);
 
-    friend class HKServer;
-private:
-    bool readBytesWithTimeout(size_t maxLength, std::vector<byte> &data, int timeout_ms);
-    byte *receivedDecrypted(size_t &decryptedSize);
-    void send(byte *message, size_t messageSize);
-    void sendChunk(byte *message, size_t messageSize);
-    void sendEncrypted(byte *message, size_t messageSize);
+    bool isConnected();
+    bool isEncrypted();
+    void setPairing(bool pairing);
+    bool isPairing();
+    uint8_t getPermission();
+    int getPairingId();
+    void stop();
+    void setEncryption(bool encryption);
 
-    void sendTLVResponse(std::vector<HKTLV *> &message);
-    void sendTLVError(byte state, TLVError error);
-    void send204Response();
-    void sendJSONResponse(int errorCode, const String& message);
+    size_t prepareEncryption(uint8_t *accessoryPublicKey, uint8_t *encryptedResponseData, const uint8_t *devicePublicKey);
+    bool finishEncryption(uint8_t *encryptedData, const size_t &encryptedSize);
+    bool didStartEncryption();
+    void resetEncryption();
+
+    void send(uint8_t *message, const size_t &messageSize);
+    void sendChunk(uint8_t *message, size_t messageSize);
+    void sendJSONResponse(int errorCode, const char *message, const size_t &messageSize);
     void sendJSONErrorResponse(int errorCode, HAPStatus status);
+    void sendTLVResponse(const std::vector<HKTLV *> &message);
+    void sendTLVError(const uint8_t &state, const TLVError &error);
 
-    static void hkdf(byte *target, byte *ikm, uint8_t ikmLength, byte *salt, uint8_t saltLength, byte *info, uint8_t infoLength);
+    void processNotifications();
+    void scheduleEvent(HKCharacteristic *characteristic, HKValue newValue);
 
-    void onPairSetup(const std::vector<byte> &body);
-    void onPairVerify(const std::vector<byte> &body);
-    void onIdentify();
-    void onGetAccessories();
-    void onGetCharacteristics(String id, bool meta, bool perms, bool type, bool ev);
-    void onUpdateCharacteristics(const String &jsonBody);
-    HAPStatus processUpdateCharacteristic(uint aid, uint iid, String ev, String value);
-    void onPairings(const std::vector<byte> &body);
-    void onReset();
-    void onResource();
+    void sendEvents(ClientEvent *event);
 private:
-    HKServer *server;
+    bool decrypt(uint8_t *decryptedMessage, const size_t &decryptedSize, const uint8_t *encryptedMessage, const size_t &encryptedSize);
+    void sendEncrypted(byte *message, const size_t &messageSize);
+private:
+    WiFiClient client;
     VerifyContext *verifyContext;
     bool encrypted;
     bool pairing;
-    byte readKey[32];
+    uint8_t readKey[32];
     int countReads;
-    byte writeKey[32];
+    uint8_t writeKey[32];
     int countWrites;
     int pairingId;
-    byte permission;
+    uint8_t permission;
     std::vector<HKEvent *> events;
     uint64_t lastUpdate;
-private:
-    enum HTTPMethod {
-        HTTP_ANY,
-        HTTP_GET,
-        HTTP_POST,
-        HTTP_PUT,
-        HTTP_PATCH,
-        HTTP_DELETE,
-        HTTP_OPTIONS
-    };
 };
 
 

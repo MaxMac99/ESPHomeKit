@@ -33,10 +33,10 @@ HKService::HKService(HKServiceType type, bool hidden, bool primary, String name)
 void HKService::setName(String name) {
     HKCharacteristic *nameChar = getCharacteristic(HKCharacteristicName);
     if (nameChar == nullptr) {
-        nameChar = new HKCharacteristic(HKCharacteristicName, HKValue(FormatString, name), PermissionPairedRead, "Name", FormatString);
+        nameChar = new HKCharacteristic(HKCharacteristicName, HKValue(HKFormatString, name), HKPermissionPairedRead, "Name", HKFormatString);
         addCharacteristic(nameChar);
     } else {
-        nameChar->notify(HKValue(FormatString, name));
+        nameChar->notify(HKValue(HKFormatString, name));
     }
 }
 
