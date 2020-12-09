@@ -1,6 +1,6 @@
 {
     "name": "ESPHomeKit",
-    "version": "2.2.1",
+    "version": "3.0.0",
     "keywords": "apple, homekit",
     "description": "HomeKit implementation for ESP8266",
     "authors": {
