@@ -474,6 +474,7 @@ void HKClient::sendTLVError(const uint8_t &state, const TLVError &error) {
  */
 void HKClient::processNotifications() {
     if (millis() - lastUpdate > NOTIFICATION_UPDATE_FREQUENCY && !events.empty()) {
+        HKLOGDEBUG("[HKClient::processNotifications] send notification\r\n");
         char *header = (char *) malloc(sizeof(events_header_chunked));
         strcpy_P(header, events_header_chunked);
         send((uint8_t *) header, sizeof(events_header_chunked)-1);
@@ -484,14 +485,15 @@ void HKClient::processNotifications() {
         json.setString("characteristics");
         json.startArray();
 
-        for (HKEvent *event : events) {
+        for (auto it = events.begin(); it != events.end();) {
             json.startObject();
 
             json.setString("aid");
-            json.setInt(event->getCharacteristic()->getService()->getAccessory()->getId());
+            json.setInt((*it)->getCharacteristic()->getService()->getAccessory()->getId());
 
-            event->getCharacteristic()->serializeToJSON(json, event->getValue(), 0);
+            (*it)->getCharacteristic()->serializeToJSON(json, (*it)->getValue(), 0);
             json.endObject();
+            it = events.erase(it);
         }
 
         json.endArray();

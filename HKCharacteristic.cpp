@@ -569,7 +569,7 @@ void HKCharacteristic::removeCallbackEvent(HKClient *client) {
  */
 void HKCharacteristic::addCallbackEvent(HKClient *client) {
     auto comp = std::find(notifiers.begin(), notifiers.end(), client);
-    if (comp != notifiers.end()) {
+    if (comp == notifiers.end()) {
         notifiers.push_back(client);
     }
 }
